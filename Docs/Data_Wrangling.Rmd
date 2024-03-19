@@ -1,0 +1,36 @@
+---
+title: "Data Wrangling"
+author: "Emma Kaufman and Jenn McNeill"
+date: "2024-03-19"
+output: pdf_document
+---
+```{r}
+library(forecast)
+library(tseries)
+library(ggplot2)
+library(Kendall)
+library(lubridate)
+library(tidyverse)
+library(ggthemes)
+library(sarima)
+library(dplyr)
+library(cowplot)
+library(readxl)
+library(readr)
+```
+
+```{r, read in the data}
+Aquifer_Auser <- read_csv("Data/Raw/Aquifer_Auser.csv")
+Aquifer_Auser$Date <- dmy(Aquifer_Auser$Date)
+
+Aquifer_Doganella <- read_csv("Data/Raw/Aquifer_Doganella.csv")
+Aquifer_Doganella$Date <- dmy(Aquifer_Doganella$Date)
+
+Aquifer_Luco <- read_csv("Data/Raw/Aquifer_Luco.csv")
+Aquifer_Luco$Date <- dmy(Aquifer_Luco$Date)
+
+Aquifer_Petrignano <- read_csv("Data/Raw/Aquifer_Petrignano.csv")
+Aquifer_Luco$Date <- dmy(Aquifer_Luco$Date)
+
+```
+
