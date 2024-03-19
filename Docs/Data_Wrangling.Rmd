@@ -20,6 +20,7 @@ library(readr)
 ```
 
 ```{r, read in the data}
+#uploading data and converting dates to date format
 Aquifer_Auser <- read_csv("Data/Raw/Aquifer_Auser.csv")
 Aquifer_Auser$Date <- dmy(Aquifer_Auser$Date)
 
