@@ -1,0 +1,42 @@
+---
+title: "jlm_wrangling"
+author: "Jenn McNeill"
+date: "2024-04-08"
+output: pdf_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+
+library(lubridate)
+library(ggplot2)
+library(forecast)  
+library(Kendall)
+library(tseries)
+library(outliers)
+library(tidyverse)
+library(smooth)
+library(dplyr)
+library(cowplot)
+
+```
+
+```{r import data}
+
+getwd()
+
+auser_raw <- read.csv(file="./Data/Raw/Aquifer_Auser.csv", header=TRUE)
+#01/01/2006 is where NAs stop in the first column
+
+doganella_raw <- read.csv(file="./Data/Raw/Aquifer_Doganella.csv", header=TRUE)
+
+luco_raw <- read.csv(file="./Data/Raw/Aquifer_Luco.csv", header=TRUE)
+#01/06/2012 is where NAs stop in the depth to groundwater pozzo columns
+
+petrignano_raw <- read.csv(file="./Data/Raw/Aquifer_Petrignano.csv", header=TRUE)
+
+```
+
+
+
