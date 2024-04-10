@@ -1,0 +1,162 @@
+---
+title: "Kaufman_McNeill_ENV797_Project"
+author: "Emma Kaufman and Jenn McNeill"
+date: "2024-04-10"
+output: pdf_document
+editor_options: 
+  chunk_output_type: console
+---
+
+
+```{r}
+
+library(lubridate)
+library(ggplot2)
+library(forecast)  
+library(Kendall)
+library(tseries)
+library(outliers)
+library(tidyverse)
+library(smooth)
+library(dplyr)
+library(cowplot)
+library(corrplot)
+
+```
+
+Provide information on how the dataset for this analysis were collected (source), the data contained in the dataset (format). Describe how you wrangled/processed your dataset to get the time series object.
+
+Add a table that summarizes your data structure (variables, units, ranges and/or central tendencies, data source if multiple are used, etc.). This table should inserted as a `kable` function in an R chunk. Just show the first 10 rows of your data. Do not include the code used to generate your table.
+
+```{r import data}
+
+getwd()
+
+#import data set
+auser_raw <- read.csv(file="./Data/Raw/Aquifer_Auser.csv", header=TRUE)
+
+#change date to date object
+auser_raw$Date <- dmy(auser_raw$Date) 
+
+#make a new dataframe for plotting purposes
+auser_depths <- auser_raw %>%
+  rename(LT2 = Depth_to_Groundwater_LT2,
+         SAL = Depth_to_Groundwater_SAL,
+         PAG = Depth_to_Groundwater_PAG,
+         CoS = Depth_to_Groundwater_CoS,
+         DIEC = Depth_to_Groundwater_DIEC) %>%
+  pivot_longer(LT2:DIEC, names_to = "Well", values_to = "Depth") %>%
+  select(Date, Well, Depth)
+
+#plot all depth to groundwater series together
+ggplot(auser_depths, aes(x=Date, color=Well))+
+  geom_line(aes(y=Depth))+
+  scale_x_date(date_breaks = "2 years", date_labels = "%Y", 
+               limits = c(as.Date("2005-01-01"), as.Date("2021-07-01")),
+               expand = c(0, 0))+
+  ylab("Depth to Groundwater (m)")+
+  theme_light()
+
+#when we look at all the series together, we see that some have values at zero
+#check the tails of all data to see which wells have values at zero
+tail(auser_raw$Depth_to_Groundwater_LT2,50) #has zero values
+tail(auser_raw$Depth_to_Groundwater_SAL,50) #has zero values
+tail(auser_raw$Depth_to_Groundwater_PAG,50) #no zero values
+tail(auser_raw$Depth_to_Groundwater_CoS,50) #has zero values
+tail(auser_raw$Depth_to_Groundwater_DIEC,50) #no zero values
+
+#create a new dataframe where values of zero are converted to NA
+#this makes it so that the tsclean function can remove NAs later
+auser_depths_nas <- auser_raw %>%
+  rename(LT2 = Depth_to_Groundwater_LT2,
+         SAL = Depth_to_Groundwater_SAL,
+         PAG = Depth_to_Groundwater_PAG,
+         CoS = Depth_to_Groundwater_CoS,
+         DIEC = Depth_to_Groundwater_DIEC) %>%
+  select(Date, LT2:DIEC) %>%
+  mutate_at(vars(LT2:DIEC), ~ ifelse(. == 0, NA, .))
+
+#create a dataframe for each well that starts at the unique first day of data
+LT2_depth <- auser_depths_nas %>%
+  select(Date, LT2)%>%
+  slice(2860:8154)
+
+SAL_depth <- auser_depths_nas %>%
+  select(Date, SAL)%>%
+  slice(3320:8154)
+
+PAG_depth <- auser_depths_nas %>%
+  select(Date, PAG)%>%
+  slice(3956:8154)
+
+CoS_depth <- auser_depths_nas %>%
+  select(Date, CoS)  %>%
+  slice(3614:8154)
+
+DIEC_depth <- auser_depths_nas %>% 
+  select(Date, DIEC) %>%
+  slice(4687:8154) 
+  
+#create a time series object of the values for depth to groundwater for each well
+#start the time series at the same unique first day of data as above
+ts_LT2 <- ts(LT2_depth[,2],start=c(2006,01,01), frequency=365)
+ts_SAL <- ts(SAL_depth[,2],start=c(2007,04,06), frequency=365)
+ts_PAG <- ts(PAG_depth[,2],start=c(2009,01,01), frequency=365)
+ts_CoS <- ts(CoS_depth[,2], start = c(2008,01,25), frequency= 365)
+ts_DIEC <- ts(DIEC_depth[,2], start = c(2011,01,02), frequency= 365)
+
+#plot all time series together
+autoplot(ts_LT2, series = "LT2")+
+  autolayer(ts_SAL, series = "SAL")+
+  autolayer(ts_PAG, series = "PAG")+
+  autolayer(ts_CoS, series = "CoS")+
+  autolayer(ts_DIEC, series = "DIEC")+
+  labs(x = "Year", y = "Depth to Groundwater (m)", color = "Well")+
+  theme_light()+
+  ggtitle("Time Series of Depth to Groundwater at Each Well")+
+  scale_x_continuous(name = "Year", breaks = seq(from=2006, to=2022, by=2))+
+  scale_y_continuous(name = "Depth to Groundwater (m)", 
+                     breaks = seq(from=-16, to=0, by=2))
+
+#run the clean function on each time series to replace NAs
+ts_LT2_clean <- tsclean(ts_LT2)
+ts_SAL_clean <- tsclean(ts_SAL)
+ts_PAG_clean <- tsclean(ts_PAG)
+ts_CoS_clean <- tsclean(ts_CoS)
+ts_DIEC_clean <- tsclean(ts_DIEC)
+
+#plot all cleaned time series together
+autoplot(ts_LT2_clean, series = "LT2")+
+  autolayer(ts_SAL_clean, series = "SAL")+
+  autolayer(ts_PAG_clean, series = "PAG")+
+  autolayer(ts_CoS_clean, series = "CoS")+
+  autolayer(ts_DIEC_clean, series = "DIEC")+
+  labs(x = "Year", y = "Depth to Groundwater (m)", color = "Well")+
+  theme_light()+
+  ggtitle("Cleaned Time Series of Depth to Groundwater at Each Well")+
+  scale_x_continuous(name = "Year", breaks = seq(from=2006, to=2022, by=2))+
+  scale_y_continuous(name = "Depth to Groundwater (m)", 
+                     breaks = seq(from=-16, to=0, by=2))
+
+```
+
+
+```{r}
+
+#looking at initial correlation of groundwater wells
+auser_subset <- auser_raw %>%
+  rename(LT2 = Depth_to_Groundwater_LT2,
+         SAL = Depth_to_Groundwater_SAL,
+         PAG = Depth_to_Groundwater_PAG,
+         CoS = Depth_to_Groundwater_CoS,
+         DIEC = Depth_to_Groundwater_DIEC) %>%
+  select(LT2:DIEC) %>%
+  na.omit()
+
+#how correlated are the different groundwater wells within one aquifer?
+auser_correlation <- cor(auser_subset)
+corrplot(auser_correlation, method = "ellipse")
+corrplot.mixed(auser_correlation, upper = "ellipse")
+
+```
+
