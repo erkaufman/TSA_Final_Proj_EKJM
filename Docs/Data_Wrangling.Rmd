@@ -17,6 +17,9 @@ library(dplyr)
 library(cowplot)
 library(readxl)
 library(readr)
+library(corrplot)
+library(dplyr)
+
 ```
 
 ```{r, read in the data}
@@ -33,5 +36,21 @@ Aquifer_Luco$Date <- dmy(Aquifer_Luco$Date)
 Aquifer_Petrignano <- read_csv("Data/Raw/Aquifer_Petrignano.csv")
 Aquifer_Luco$Date <- dmy(Aquifer_Luco$Date)
 
+Aquifer_Auser_Long <- pivot_longer(Aquifer_Auser, Depth_to_Groundwater_LT2:Depth_to_Groundwater_DIEC, names_to="GW Well", values_to= "Depth")
+
+
+#looking at initial correlation of groundwater wells
+Auser.subset <- 
+  Aquifer_Auser %>% 
+  select(Depth_to_Groundwater_LT2:Depth_to_Groundwater_DIEC) %>% 
+  na.omit()
+
+#how correlated are the different groundwater wells within one aquifer?
+AuserCorr <- cor(Auser.subset)
+corrplot(AuserCorr, method = "ellipse")
+corrplot.mixed(AuserCorr, upper = "ellipse")
+
+
+ 
 ```
 
