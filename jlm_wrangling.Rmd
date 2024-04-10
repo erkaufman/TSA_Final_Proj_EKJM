@@ -29,10 +29,52 @@ getwd()
 auser_raw <- read.csv(file="./Data/Raw/Aquifer_Auser.csv", header=TRUE)
 #01/01/2006 is where NAs stop in the first column
 
+auser_raw$Date <- dmy(auser_raw$Date) 
+
+ggplot(auser_raw)+
+  geom_line(aes(x=Date, y=Depth_to_Groundwater_LT2))+
+  scale_x_date(date_breaks = "5 years", date_labels = "%Y", 
+               limits = c(as.Date("2007-01-01"), as.Date("2022-12-31")),
+               expand = c(0, 0))
+
+ggplot(auser_raw)+
+  geom_line(aes(x=Date, y=Depth_to_Groundwater_SAL))+
+  scale_x_date(date_breaks = "5 years", date_labels = "%Y", 
+               limits = c(as.Date("2007-01-01"), as.Date("2022-12-31")),
+               expand = c(0, 0))
+
+ggplot(auser_raw)+
+  geom_line(aes(x=Date, y=Depth_to_Groundwater_PAG))+
+  scale_x_date(date_breaks = "5 years", date_labels = "%Y", 
+               limits = c(as.Date("2007-01-01"), as.Date("2022-12-31")),
+               expand = c(0, 0))
+
+ggplot(auser_raw)+
+  geom_line(aes(x=Date, y=Depth_to_Groundwater_CoS))+
+  scale_x_date(date_breaks = "5 years", date_labels = "%Y", 
+               limits = c(as.Date("2007-01-01"), as.Date("2022-12-31")),
+               expand = c(0, 0))
+
+ggplot(auser_raw)+
+  geom_line(aes(x=Date, y=Depth_to_Groundwater_DIEC))+
+  scale_x_date(date_breaks = "5 years", date_labels = "%Y", 
+               limits = c(as.Date("2007-01-01"), as.Date("2022-12-31")),
+               expand = c(0, 0))
+
+tail(auser_raw$Depth_to_Groundwater_LT2,100)
+
 doganella_raw <- read.csv(file="./Data/Raw/Aquifer_Doganella.csv", header=TRUE)
 
 luco_raw <- read.csv(file="./Data/Raw/Aquifer_Luco.csv", header=TRUE)
 #01/06/2012 is where NAs stop in the depth to groundwater pozzo columns
+
+luco_raw$Date <- dmy(luco_raw$Date) 
+
+ggplot(luco_raw)+
+  geom_line(aes(x=Date, y=Depth_to_Groundwater_Pozzo_3))+
+  scale_x_date(date_breaks = "5 years", date_labels = "%Y", 
+               limits = c(as.Date("2017-01-01"), as.Date("2022-12-31")),
+               expand = c(0, 0))
 
 petrignano_raw <- read.csv(file="./Data/Raw/Aquifer_Petrignano.csv", header=TRUE)
 
