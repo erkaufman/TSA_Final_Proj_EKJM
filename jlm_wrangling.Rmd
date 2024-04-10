@@ -22,6 +22,10 @@ library(cowplot)
 
 ```
 
+Provide information on how the dataset for this analysis were collected (source), the data contained in the dataset (format). Describe how you wrangled/processed your dataset to get the time series object.
+
+Add a table that summarizes your data structure (variables, units, ranges and/or central tendencies, data source if multiple are used, etc.). This table should inserted as a `kable` function in an R chunk. Just show the first 10 rows of your data. Do not include the code used to generate your table.
+
 ```{r import data}
 
 getwd()
@@ -31,17 +35,34 @@ auser_raw <- read.csv(file="./Data/Raw/Aquifer_Auser.csv", header=TRUE)
 
 auser_raw$Date <- dmy(auser_raw$Date) 
 
+auser_longer <- pivot_longer(auser_raw, Depth_to_Groundwater_LT2:Depth_to_Groundwater_DIEC, names_to = "GW_Well", values_to = "Depth")
+
+auser_depths <- auser_longer %>%
+  select(Date, GW_Well, Depth)
+
+#plot all depths together
+ggplot(auser_depths, aes(x=Date, color=GW_Well))+
+  geom_line(aes(y=Depth))+
+  scale_x_date(date_breaks = "5 years", date_labels = "%Y", 
+               limits = c(as.Date("2002-01-01"), as.Date("2022-12-31")),
+               expand = c(0, 0))+
+  theme_light()
+
 ggplot(auser_raw)+
   geom_line(aes(x=Date, y=Depth_to_Groundwater_LT2))+
   scale_x_date(date_breaks = "5 years", date_labels = "%Y", 
-               limits = c(as.Date("2007-01-01"), as.Date("2022-12-31")),
+               limits = c(as.Date("2002-01-01"), as.Date("2022-12-31")),
                expand = c(0, 0))
+
+tail(auser_raw$Depth_to_Groundwater_LT2,30)
 
 ggplot(auser_raw)+
   geom_line(aes(x=Date, y=Depth_to_Groundwater_SAL))+
   scale_x_date(date_breaks = "5 years", date_labels = "%Y", 
                limits = c(as.Date("2007-01-01"), as.Date("2022-12-31")),
                expand = c(0, 0))
+
+tail(auser_raw$Depth_to_Groundwater_SAL,50)
 
 ggplot(auser_raw)+
   geom_line(aes(x=Date, y=Depth_to_Groundwater_PAG))+
@@ -55,40 +76,32 @@ ggplot(auser_raw)+
                limits = c(as.Date("2007-01-01"), as.Date("2022-12-31")),
                expand = c(0, 0))
 
+tail(auser_raw$Depth_to_Groundwater_CoS,50)
+
 ggplot(auser_raw)+
   geom_line(aes(x=Date, y=Depth_to_Groundwater_DIEC))+
   scale_x_date(date_breaks = "5 years", date_labels = "%Y", 
                limits = c(as.Date("2007-01-01"), as.Date("2022-12-31")),
                expand = c(0, 0))
 
-tail(auser_raw$Depth_to_Groundwater_LT2,100)
-
-doganella_raw <- read.csv(file="./Data/Raw/Aquifer_Doganella.csv", header=TRUE)
-
-luco_raw <- read.csv(file="./Data/Raw/Aquifer_Luco.csv", header=TRUE)
-#01/06/2012 is where NAs stop in the depth to groundwater pozzo columns
-
-luco_raw$Date <- dmy(luco_raw$Date) 
-
-ggplot(luco_raw)+
-  geom_line(aes(x=Date, y=Depth_to_Groundwater_Pozzo_1))+
+ggplot(auser_raw)+
+  geom_line(aes(x=Date, y=Depth_to_Groundwater_LT2))+
   scale_x_date(date_breaks = "5 years", date_labels = "%Y", 
-               limits = c(as.Date("2017-01-01"), as.Date("2022-12-31")),
+               limits = c(as.Date("2002-01-01"), as.Date("2022-12-31")),
                expand = c(0, 0))
 
-ggplot(luco_raw)+
-  geom_line(aes(x=Date, y=Depth_to_Groundwater_Pozzo_3))+
-  scale_x_date(date_breaks = "5 years", date_labels = "%Y", 
-               limits = c(as.Date("2017-01-01"), as.Date("2022-12-31")),
-               expand = c(0, 0))
+#plot all depth to groundwater lines together
+#realize that some lines have values of zero
+#convert all zeros to NAs
+#convert all series to time series objects
+#run the ts clean function to interpolate missing values
 
-ggplot(luco_raw)+
-  geom_line(aes(x=Date, y=Depth_to_Groundwater_Pozzo_4))+
-  scale_x_date(date_breaks = "5 years", date_labels = "%Y", 
-               limits = c(as.Date("2017-01-01"), as.Date("2022-12-31")),
-               expand = c(0, 0))
+auser_nas <- auser_raw %>%
+  select(Date, Depth_to_Groundwater_LT2:Depth_to_Groundwater_DIEC) %>%
+  mutate_at(vars(Depth_to_Groundwater_LT2:Depth_to_Groundwater_DIEC), 
+            ~ ifelse(. == 0, NA, .))
 
-petrignano_raw <- read.csv(file="./Data/Raw/Aquifer_Petrignano.csv", header=TRUE)
+ts_LT2 <- ts(auser_nas[,2],start=c(1998,03,05), frequency=365)
 
 ```
 
