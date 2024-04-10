@@ -96,6 +96,13 @@ CoS_depth <- auser_depths_nas %>%
 DIEC_depth <- auser_depths_nas %>% 
   select(Date, DIEC) %>%
   slice(4687:8154) 
+
+#create a start date object for each well
+start_LT2 <- as.Date("2006-01-01")
+start_SAL <- as.Date("2007-04-06")
+start_PAG <- as.Date("2009-01-01")
+start_CoS <- as.Date("2008-01-25")
+start_DIEC <- as.Date("2011-01-02")
   
 #create a time series object of the values for depth to groundwater for each well
 #start the time series at the same unique first day of data as above
@@ -141,7 +148,7 @@ autoplot(ts_LT2_clean, series = "LT2")+
 ```
 
 
-```{r}
+```{r correlation plots}
 
 #looking at initial correlation of groundwater wells
 auser_subset <- auser_raw %>%
@@ -160,3 +167,54 @@ corrplot.mixed(auser_correlation, upper = "ellipse")
 
 ```
 
+
+```{r}
+
+#create a dataframe with date and rainfall data
+auser_rain <- auser_raw %>% 
+  slice(2860:8154) %>% 
+  select(Date:Rainfall_Fabbriche_di_Vallico)
+
+#create a start date object for rainfall
+start_rain <- as.Date("2006-01-01")
+
+#find and print the row and column indices of NA values
+na_indices_rain <- which(is.na(auser_rain), arr.ind = TRUE)
+print(na_indices_rain)
+
+#plotting rainfall, need to fill in na and then make TS
+ggplot(auser_rain)+ 
+  geom_line(aes(x=Date, y=Rainfall_Fabbriche_di_Vallico))
+
+ts_rain <- ts(auser_rain[,2:11],start=c(2006,01,01), frequency=365)
+
+autoplot(ts_rain)
+
+#to do: make a timeseries object that has interpolated na values? 
+```
+
+
+```{r}
+
+#create a dataframe with date and temperature data
+auser_temp <- auser_raw %>% 
+  select(Date,Temperature_Orentano:Temperature_Lucca_Orto_Botanico)
+
+#create a start date object for temperature
+start_temp <- as.Date("1998-03-05")
+
+#note: 0 is essentially NA for the beginning rows, true zero is 0.0
+```
+
+
+```{r}
+
+#create a dataframe with date and volume data
+auser_volume <- auser_raw %>% 
+  slice(2495:8154) %>% 
+  select(Date,Volume_POL:Volume_CSAL)
+
+#create a start date object for volume
+start_volume <- as.Date("2005-01-01")
+
+```
