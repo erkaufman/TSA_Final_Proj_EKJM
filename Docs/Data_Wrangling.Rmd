@@ -82,4 +82,46 @@ autoplot(CoS_ts_clean) +
   autolayer(CoS_ts, color= "lightgreen")
 
 ```
+ 
+making a df for rainfall and date
+
+```{r}
+#rainfall data
+rainfall_auser <- auser_raw %>% 
+  slice(2860:8154) %>% 
+  select(Date:Rainfall_Fabbriche_di_Vallico)
+
+# Find the indices of NA values
+na_indices_rainfall <- which(is.na(rainfall_auser), arr.ind = TRUE)
+
+# Print the row and column indices of NA values
+print(na_indices_rainfall)
+```
+
+making a df for temp and date
+```{r}
+#temperature data
+temperature_auser <- auser_raw %>% 
+  select(Date,Temperature_Orentano:Temperature_Lucca_Orto_Botanico)
+
+#note: 0 is essentially NA for the beginning rows, true zero is 0.0
+```
+
+making a df for volume and date 
+```{r}
+#volume of water going to use 
+volume_auser <- auser_raw %>% 
+  slice(2495:8154) %>% 
+  select(Date,Volume_POL:Volume_CSAL)
+
+```
+
+make objects that are start date for each well 
+```{r}
+start_LT2 <- as.Date("2006-01-01")
+start_SAL <- as.Date("2007-04-06")
+start_PAG <- as.Date("2009-01-01")
+start_CoS <- as.Date("2008-01-25")
+start_DIEC <- as.Date("2011-01-02")
+```
 
