@@ -96,6 +96,11 @@ na_indices_rainfall <- which(is.na(rainfall_auser), arr.ind = TRUE)
 
 # Print the row and column indices of NA values
 print(na_indices_rainfall)
+
+#plotting rainfall, need to fill in na and then make TS
+ggplot(rainfall_auser)+ geom_line(aes(x=Date, y=rainfall_auser$Rainfall_Fabbriche_di_Vallico))
+
+#to do: make a timeseries object that has interpolated na values? 
 ```
 
 making a df for temp and date
