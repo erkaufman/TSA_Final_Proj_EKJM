@@ -101,7 +101,41 @@ auser_nas <- auser_raw %>%
   mutate_at(vars(Depth_to_Groundwater_LT2:Depth_to_Groundwater_DIEC), 
             ~ ifelse(. == 0, NA, .))
 
-ts_LT2 <- ts(auser_nas[,2],start=c(1998,03,05), frequency=365)
+LT2 <- auser_nas %>%
+  select(Date, Depth_to_Groundwater_LT2)%>%
+  slice(2860:8154)
+  
+ts_LT2 <- ts(LT2[,2],start=c(2006,01,01), frequency=365)
+ts_LT2_clean <- tsclean(ts_LT2)
+autoplot(ts_LT2)
+#2006,01,01 is where NA ends
+
+SAL <- auser_nas %>%
+  select(Date, Depth_to_Groundwater_SAL)%>%
+  slice(3320:8154)
+
+ts_SAL <- ts(SAL[,2],start=c(2007,04,06), frequency=365)
+ts_SAL_clean <- tsclean(ts_SAL)
+autoplot(ts_SAL)
+#2007,04,06 is where NA ends
+
+PAG <- auser_nas %>%
+  select(Date, Depth_to_Groundwater_PAG)%>%
+  slice(3956:8154)
+
+ts_PAG <- ts(PAG[,2],start=c(2009,01,01), frequency=365)
+ts_PAG_clean <- tsclean(ts_PAG)
+autoplot(ts_PAG)
+#2009-01-01 is where NA ends
+
+autoplot(ts_LT2_clean)+
+  autolayer(ts_LT2, color = "red")
+
+autoplot(ts_SAL_clean)+
+  autolayer(ts_SAL, color = "red")
+
+autoplot(ts_PAG_clean)+
+  autolayer(ts_PAG, color = "red")
 
 ```
 
