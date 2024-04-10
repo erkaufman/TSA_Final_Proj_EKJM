@@ -19,6 +19,7 @@ library(readxl)
 library(readr)
 library(corrplot)
 library(dplyr)
+library(outliers)
 
 ```
 
@@ -49,8 +50,36 @@ Auser.subset <-
 AuserCorr <- cor(Auser.subset)
 corrplot(AuserCorr, method = "ellipse")
 corrplot.mixed(AuserCorr, upper = "ellipse")
-
-
  
+```
+```{r}
+#making time series objects cleaned for CoS and DIEC
+
+#remote NAs from the dataframe
+CoS_df <- auser_nas %>%
+  slice(3614:8154) %>%
+  select(Date, Depth_to_Groundwater_CoS)
+
+DIEC_df <- auser_nas %>% 
+  slice(4687:8154) %>% 
+  select(Date, Depth_to_Groundwater_DIEC)
+
+CoS_ts <- ts(CoS_df$Depth_to_Groundwater_CoS, start = c(2008,01,25), frequency= 365)
+autoplot(CoS_ts)
+CoS_ts_clean <- tsclean(CoS_ts)
+autoplot(CoS_ts_clean)
+  
+  
+  
+DIEC_ts <- ts(DIEC_df$Depth_to_Groundwater_DIEC, start = c(2011,01,02), frequency= 365)
+autoplot(DIEC_ts)
+DIEC_ts_clean <- tsclean(DIEC_ts)
+
+autoplot(DIEC_ts_clean) +
+  autolayer(DIEC_ts, color= "blue")
+
+autoplot(CoS_ts_clean) +
+  autolayer(CoS_ts, color= "lightgreen")
+
 ```
 
