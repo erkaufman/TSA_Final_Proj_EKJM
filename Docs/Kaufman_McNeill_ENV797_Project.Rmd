@@ -293,5 +293,10 @@ Format your R chunks so that graphs are displayed but code is not displayed. Acc
 
 Each figure should be accompanied by a caption, and referenced within the text if applicable.
 
+```{r}
+# how correlated at depth to groundwater and rainfall?
+
+
+```
 
 
