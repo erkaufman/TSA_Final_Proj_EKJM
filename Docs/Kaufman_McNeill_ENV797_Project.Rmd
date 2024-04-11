@@ -293,10 +293,23 @@ Format your R chunks so that graphs are displayed but code is not displayed. Acc
 
 Each figure should be accompanied by a caption, and referenced within the text if applicable.
 
-```{r}
-# how correlated at depth to groundwater and rainfall?
+```{r, }
+
+plot_grid(
+  autoplot(Acf(ts_CoS_clean, lag = 40, plot=FALSE), 
+                main = "CoS depth to GW"),
+  autoplot(Pacf(ts_CoS_clean, lag = 40, plot=FALSE),  
+                  main = "CoS depth to GW")
+)
+#doesn't look like there is seasonality? above 
+
+#looks like there is seasonality for decomposition! 
+decompose_ts_CoS <- decompose(ts_CoS_clean,"additive")
+plot(decompose_ts_CoS)
+
+decompose_ts_CoS <- decompose(ts_CoS_clean,"multiplicative")
+plot(decompose_ts_CoS)
 
 
 ```
-
 
