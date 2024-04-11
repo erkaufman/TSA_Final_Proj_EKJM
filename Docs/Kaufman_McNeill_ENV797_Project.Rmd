@@ -24,6 +24,11 @@ library(kableExtra)
 
 ```
 
+#### Introduction, Motivation, Relevance, Objectives
+
+Write a few paragraphs detailing the rationale for your study. This should include both the context of the topic as well as a rationale for your choice of dataset (reason for location, variables, etc.). You may choose to include citations if you like or any other reference you may have used during the project (optional).
+
+#### Dataset information
 Provide information on how the dataset for this analysis were collected (source), the data contained in the dataset (format). Describe how you wrangled/processed your dataset to get the time series object.
 
 Add a table that summarizes your data structure (variables, units, ranges and/or central tendencies, data source if multiple are used, etc.). This table should inserted as a `kable` function in an R chunk. Just show the first 10 rows of your data. Do not include the code used to generate your table.
@@ -246,14 +251,15 @@ start_temp <- as.Date("1998-03-05")
 
 
 ```{r}
-
 #create a dataframe with date and volume data
 auser_volume <- auser_raw %>% 
   slice(2495:8154) %>% 
-  select(Date,Volume_POL:Volume_CSAL)
+  select(Date,Volume_POL:Volume_CSAL)  %>%
+  mutate_at(vars(Volume_POL:Volume_CSAL), ~ ifelse(. == 0, NA, .))
 
 #create a start date object for volume
 start_volume <- as.Date("2005-01-01")
+start_volume_CSA_CSAL <- as.Date("2014-01-01")
 
 ```
 
@@ -277,3 +283,15 @@ corrplot(auser_correlation, method = "ellipse")
 corrplot.mixed(auser_correlation, upper = "ellipse")
 
 ```
+
+
+#### Analysis (Methods and Models)
+
+Describe the analysis and tests that were performed. Described the components of the time series you identified. List any packages and functions used. Include visualizations of your dataset (i.e. time series plot, ACF, PACF, etc). 
+
+Format your R chunks so that graphs are displayed but code is not displayed. Accompany these graphs with text sections that describe the visualizations and provide context for further analyses.
+
+Each figure should be accompanied by a caption, and referenced within the text if applicable.
+
+
+
