@@ -7,7 +7,6 @@ editor_options:
   chunk_output_type: console
 ---
 
-
 ```{r}
 
 library(lubridate)
@@ -29,10 +28,9 @@ Provide information on how the dataset for this analysis were collected (source)
 
 Add a table that summarizes your data structure (variables, units, ranges and/or central tendencies, data source if multiple are used, etc.). This table should inserted as a `kable` function in an R chunk. Just show the first 10 rows of your data. Do not include the code used to generate your table.
 
-The dataset for this analysis was collected from the [Acea Group Smart Water Analytics Competition on Kaggle](https://www.kaggle.com/c/acea-water-prediction/data). The Acea Group is an Italian utility operator that develops and maintains water networks for 9 million constituents. As a utility operator, they are concerned with preserving waterbodies and thus forecasting the water levels at the sources where they get their water. The competition included nine different datasets that represented water springs, lakes, rivers, or aquifers and had unique attributes and characteristics. For our final project, we decided to focus our time series modeling and forecasting on the Auser Aquifer. Our objective is to predict the amount of water in the Auser Aquifer by modeling the depth to groundwater and simultaneously evaluate how other variables such as rainfall, temperature, and treatment plant volume may impact our prediction. 
+The dataset for this analysis was collected from the [Acea Group Smart Water Analytics Competition on Kaggle](https://www.kaggle.com/c/acea-water-prediction/data). The Acea Group is an Italian utility operator that develops and maintains water networks for 9 million constituents. As a utility operator, they are concerned with preserving water bodies and thus forecasting the water levels at the sources where they get their water. The competition included nine different datasets that represented water springs, lakes, rivers, or aquifers and had unique attributes and characteristics. For our final project, we decided to focus our time series modeling and forecasting on the Auser Aquifer. Our objective is to predict the amount of water in the Auser Aquifer by modeling the depth to groundwater and simultaneously evaluate how other variables such as rainfall, temperature, and treatment plant volume may impact our prediction. 
 
-The dataset for the Auser Aquifer includes daily depth to groundwater measurements (in meters) from five different wells across the north and south sectors. Wells SAL, PAG, CoS, and DIEC represent the north while Well LT2 represents the south. We also have daily temperatyre data at four sites, daily rainfall data at ten sites, and daily volume data from five different water treatment facilities. 
-
+The dataset for the Auser Aquifer includes daily depth to groundwater measurements (in meters) from five different wells across the north and south sectors. Wells SAL, PAG, CoS, and DIEC represent the north while Well LT2 represents the south. We also have daily temperature data at four sites, daily rainfall data at ten sites, and daily volume data from five different water treatment facilities. 
 
 ```{r import data, include=FALSE}
 
@@ -138,7 +136,7 @@ kbl(data_information, caption="Data Source and Structure") %>%
 ```
 
 
-The first obstacle with wrangling our data came when we realized that the data for each variable started at a different date. We found this issue by plotting the five depth to groundwater lines and seeing a large lag before the data started, NA values within each series, and a few random "zero" values that we assumed to be errors. To rectify this issue, we converted all "zero" values to NA, found the start date for each well's data, and then converted each well's data into a time series object. When we plotted these five time series together, we still had gaps of NA data. We ran the tsclean function to fill in the gaps of missing data with interpolated values and then had five clean series with no data gaps. 
+The first obstacle with wrangling our data came when we realized that the data for each variable started at a different date. We found this issue by plotting the five depth to groundwater lines and seeing a large lag before the data started, NA values within each series, and a few random "zero" values that we assumed to be errors. To rectify this issue, we converted all "zero" values to NA, found the start date for each well's data, and then converted each well's data into a time series object. When we plotted these five time series together, we still had gaps of NA data. We ran the tsclean() function to fill in the gaps of missing data with interpolated values and then had five clean series with no data gaps. 
 
 ```{r}
 
@@ -187,8 +185,9 @@ autoplot(ts_LT2_clean, series = "LT2")+
 
 We followed the same process for the other variables (rainfall, temperature, and volume) so that we had clean time series objects that could be used as exogenous variables later on in the modeling and forecasting portion of our process.
 
-```{r}
+[For rainfall data we looked at the monitoring sites that had continuous data]
 
+```{r}
 #create a dataframe with date and rainfall data
 auser_rain <- auser_raw %>% 
   slice(2860:8154) %>% 
@@ -201,20 +200,40 @@ start_rain <- as.Date("2006-01-01")
 na_indices_rain <- which(is.na(auser_rain), arr.ind = TRUE)
 print(na_indices_rain)
 
+#remove the monitoring sites that don't have continuous data, columns 4 and 7
+auser_rain_subset <- auser_rain[, !(names(auser_rain) %in% c("Rainfall_Monte_Serra", "Rainfall_Piaggione"))]
+
+auser_rain_long <- pivot_longer(auser_rain_subset, Rainfall_Gallicano:Rainfall_Fabbriche_di_Vallico, names_to = "Rainfall.location", values_to = "Rainfall.Depth")
+
 #plotting rainfall, need to fill in na and then make TS
-ggplot(auser_rain)+ 
-  geom_line(aes(x=Date, y=Rainfall_Fabbriche_di_Vallico))
+ggplot(auser_rain_long, aes(x=Date,y=Rainfall.Depth, color=Rainfall.location))+ 
+  geom_line()
 
-ts_rain <- ts(auser_rain[,2:11],start=c(2006,01,01), frequency=365)
+#ts for each rainfall gauging station
+list_rain_ts <- list()
 
-autoplot(ts_rain)
+# Iterate over each monitoring site column
+for (i in 2:9) {
+  # Extract the column name
+  column_name <- names(auser_rain_subset)[i]
+  
+  # Create a time series object for the current monitoring site column
+  ts_rain <- ts(auser_rain_subset[, i], start = c(2006, 1, 1), frequency = 365)
+  
+  # Assign a unique name to the time series object based on the column name
+  ts_name <- paste("ts_", column_name, sep = "")
+  
+  # Assign the time series object to the list with the unique name
+  list_rain_ts[[ts_name]] <- ts_rain
+}
 
-#to do: make a timeseries object that has interpolated na values? 
+#plotting some of the rainfall data
+autoplot(list_rain_ts$ts_Rainfall_Orentano)
+
 ```
 
 
 ```{r}
-
 #create a dataframe with date and temperature data
 auser_temp <- auser_raw %>% 
   select(Date,Temperature_Orentano:Temperature_Lucca_Orto_Botanico)
