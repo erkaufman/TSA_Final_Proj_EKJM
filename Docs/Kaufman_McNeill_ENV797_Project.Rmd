@@ -21,6 +21,7 @@ library(smooth)
 library(dplyr)
 library(cowplot)
 library(corrplot)
+library(kableExtra)
 
 ```
 
@@ -28,7 +29,12 @@ Provide information on how the dataset for this analysis were collected (source)
 
 Add a table that summarizes your data structure (variables, units, ranges and/or central tendencies, data source if multiple are used, etc.). This table should inserted as a `kable` function in an R chunk. Just show the first 10 rows of your data. Do not include the code used to generate your table.
 
-```{r import data}
+The dataset for this analysis was collected from the [Acea Group Smart Water Analytics Competition on Kaggle](https://www.kaggle.com/c/acea-water-prediction/data). The Acea Group is an Italian utility operator that develops and maintains water networks for 9 million constituents. As a utility operator, they are concerned with preserving waterbodies and thus forecasting the water levels at the sources where they get their water. The competition included nine different datasets that represented water springs, lakes, rivers, or aquifers and had unique attributes and characteristics. For our final project, we decided to focus our time series modeling and forecasting on the Auser Aquifer. Our objective is to predict the amount of water in the Auser Aquifer by modeling the depth to groundwater and simultaneously evaluate how other variables such as rainfall, temperature, and treatment plant volume may impact our prediction. 
+
+The dataset for the Auser Aquifer includes daily depth to groundwater measurements (in meters) from five different wells across the north and south sectors. Wells SAL, PAG, CoS, and DIEC represent the north while Well LT2 represents the south. We also have daily temperatyre data at four sites, daily rainfall data at ten sites, and daily volume data from five different water treatment facilities. 
+
+
+```{r import data, include=FALSE}
 
 getwd()
 
@@ -103,7 +109,39 @@ start_SAL <- as.Date("2007-04-06")
 start_PAG <- as.Date("2009-01-01")
 start_CoS <- as.Date("2008-01-25")
 start_DIEC <- as.Date("2011-01-02")
-  
+
+```
+
+```{r}
+head(auser_raw)
+
+data_information <- data.frame(
+  Source = ("Acea Group Smart Water Analytics Competition on Kaggle"),
+  Variables = c("Date, Rainfall_Gallicano, Rainfall_Pontetetto, Rainfall_Monte_Serra,
+                Rainfall_Orentano, Rainfall_Borgo_a_Mozzano, Rainfall_Piaggione,
+                Rainfall_Calavorno, Rainfall_Croce_Arcana, 
+                Rainfall_Tereglio_Coreglia_Antelminelli, Rainfall_Fabbriche_di_Vallico, 
+                Depth_to_Groundwater_LT2, Depth_to_Groundwater_SAL, Depth_to_Groundwater_PAG, 
+                Depth_to_Groundwater_CoS, Depth_to_Groundwater_DIEC, Temperature_Orentano, 
+                Temperature_Monte_Serra, Temperature_Ponte_a_Moriano, 
+                Temperature_Lucca_Orto_Botanico, Volume_POL, Volume_CC1, Volume_CC2, 
+                Volume_CSA, Volume_CSAL, Hydrometry_Monte_S_Quirico, Hydrometry_Piaggione"),
+  Units = c("Date: Year, Month, Date format, Rainfall: millimeters, Depth to Groundwater: 
+                meters, Temperature: Degrees Celcius, Volume: figure this out, Hydrometry:
+                figure this out"))
+
+kbl(data_information, caption="Data Source and Structure") %>% 
+  kable_styling(full_width = FALSE, 
+                position = "center",
+                latex_options = "hold_position")
+
+```
+
+
+The first obstacle with wrangling our data came when we realized that the data for each variable started at a different date. We found this issue by plotting the five depth to groundwater lines and seeing a large lag before the data started, NA values within each series, and a few random "zero" values that we assumed to be errors. To rectify this issue, we converted all "zero" values to NA, found the start date for each well's data, and then converted each well's data into a time series object. When we plotted these five time series together, we still had gaps of NA data. We ran the tsclean function to fill in the gaps of missing data with interpolated values and then had five clean series with no data gaps. 
+
+```{r}
+
 #create a time series object of the values for depth to groundwater for each well
 #start the time series at the same unique first day of data as above
 ts_LT2 <- ts(LT2_depth[,2],start=c(2006,01,01), frequency=365)
@@ -147,26 +185,7 @@ autoplot(ts_LT2_clean, series = "LT2")+
 
 ```
 
-
-```{r correlation plots}
-
-#looking at initial correlation of groundwater wells
-auser_subset <- auser_raw %>%
-  rename(LT2 = Depth_to_Groundwater_LT2,
-         SAL = Depth_to_Groundwater_SAL,
-         PAG = Depth_to_Groundwater_PAG,
-         CoS = Depth_to_Groundwater_CoS,
-         DIEC = Depth_to_Groundwater_DIEC) %>%
-  select(LT2:DIEC) %>%
-  na.omit()
-
-#how correlated are the different groundwater wells within one aquifer?
-auser_correlation <- cor(auser_subset)
-corrplot(auser_correlation, method = "ellipse")
-corrplot.mixed(auser_correlation, upper = "ellipse")
-
-```
-
+We followed the same process for the other variables (rainfall, temperature, and volume) so that we had clean time series objects that could be used as exogenous variables later on in the modeling and forecasting portion of our process.
 
 ```{r}
 
@@ -216,5 +235,26 @@ auser_volume <- auser_raw %>%
 
 #create a start date object for volume
 start_volume <- as.Date("2005-01-01")
+
+```
+
+The last bit of data wrangling that we performed was running the correlation function on our groundwater data to discern whether the depth to groundwater values at the five wells were correlated to one another. We found that the four north wells had similar correlation values to one another and that the one south well was weakly correlated to the others. Our correlation plot 
+
+```{r correlation plots}
+
+#looking at initial correlation of groundwater wells
+auser_subset <- auser_raw %>%
+  rename(LT2 = Depth_to_Groundwater_LT2,
+         SAL = Depth_to_Groundwater_SAL,
+         PAG = Depth_to_Groundwater_PAG,
+         CoS = Depth_to_Groundwater_CoS,
+         DIEC = Depth_to_Groundwater_DIEC) %>%
+  select(LT2:DIEC) %>%
+  na.omit()
+
+#how correlated are the different groundwater wells within one aquifer?
+auser_correlation <- cor(auser_subset)
+corrplot(auser_correlation, method = "ellipse")
+corrplot.mixed(auser_correlation, upper = "ellipse")
 
 ```
