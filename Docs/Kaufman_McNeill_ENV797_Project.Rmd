@@ -118,10 +118,11 @@ start_DIEC <- as.Date("2011-01-02")
 ```{r}
 head(auser_raw)
 
-data_information <- data.frame(
-  Source = ("Acea Group Smart Water Analytics Competition on Kaggle"),
-  Variables = c("Date, Rainfall_Gallicano, Rainfall_Pontetetto, Rainfall_Monte_Serra, Rainfall_Orentano, Rainfall_Borgo_a_Mozzano, Rainfall_Piaggione, Rainfall_Calavorno, Rainfall_Croce_Arcana, Rainfall_Tereglio_Coreglia_Antelminelli, Rainfall_Fabbriche_di_Vallico, Depth_to_Groundwater_LT2, Depth_to_Groundwater_SAL, Depth_to_Groundwater_PAG, Depth_to_Groundwater_CoS, Depth_to_Groundwater_DIEC, Temperature_Orentano, Temperature_Monte_Serra, Temperature_Ponte_a_Moriano, Temperature_Lucca_Orto_Botanico, Volume_POL, Volume_CC1, Volume_CC2, Volume_CSA, Volume_CSAL, Hydrometry_Monte_S_Quirico, Hydrometry_Piaggione"),
-  Units = c("Date, Millimeters, Millimeters, Millimeters, Millimeters, Millimeters, Millimeters, Millimeters, Millimeters, Millimeters, Millimeters, Meters, Meters, Meters, Meters, Meters, Celcius, Celcius, Celcius, Celcius, IDK, IDK, IDK, IDK, IDK, IDK, IDK"))
+
+Variables <- c("Date", "Rainfall_Gallicano", "Rainfall_Pontetetto", "Rainfall_Monte_Serra", "Rainfall_Orentano", "Rainfall_Borgo_a_Mozzano", "Rainfall_Piaggione", "Rainfall_Calavorno", "Rainfall_Croce_Arcana", "Rainfall_Tereglio_Coreglia_Antelminelli", "Rainfall_Fabbriche_di_Vallico", "Depth_to_Groundwater_LT2", "Depth_to_Groundwater_SAL", "Depth_to_Groundwater_PAG", "Depth_to_Groundwater_CoS", "Depth_to_Groundwater_DIEC", "Temperature_Orentano", "Temperature_Monte_Serra", "Temperature_Ponte_a_Moriano", "Temperature_Lucca_Orto_Botanico", "Volume_POL", "Volume_CC1", "Volume_CC2", "Volume_CSA", "Volume_CSAL", "Hydrometry_Monte_S_Quirico", "Hydrometry_Piaggione")
+Units <- c("Date", "Millimeters", "Millimeters", "Millimeters", "Millimeters", "Millimeters", "Millimeters", "Millimeters", "Millimeters", "Millimeters", "Millimeters", "Meters", "Meters", "Meters", "Meters", "Meters", "Celcius", "Celcius", "Celcius", "Celcius", "IDK", "IDK", "IDK", "IDK", "IDK", "IDK", "IDK")
+
+data_information <- data.frame(Variables, Units)
 
 # data_information$Variables <- gsub(", ", "\n", data_information$Variables)
 # data_information$Units <- gsub(", ", "\n", data_information$Units)
@@ -130,14 +131,11 @@ data_information <- data.frame(
 # data_information$Units <- gsub(" ", "\n", data_information$Units)
 
 # Print the table using kbl with manual line breaks
-kbl(data_information, caption="Data Source and Structure") %>%
-  kable_styling(full_width = FALSE, 
+kbl(data_information, caption="Data Structure: Acea Group Smart Water Analytics Competition on Kaggle") %>%
+  kable_styling(full_width = TRUE, 
                 position = "center",
                 latex_options = "hold_position") %>%
-  collapse_rows(column = 2, valign = "top") %>%
-  column_spec(1, width = "2em") %>%
-  column_spec(2, width = "2em") %>%
-  column_spec(3, width = "2em")
+  collapse_rows(column = 2, valign = "top")
 
 kbl(data_information, caption="Data Source and Structure") %>% 
   kable_styling(full_width = FALSE, 
