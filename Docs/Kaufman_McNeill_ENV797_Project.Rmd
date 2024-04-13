@@ -118,21 +118,18 @@ start_DIEC <- as.Date("2011-01-02")
 ```
 
 ```{r}
-head(auser_raw)
 
+#show the head of 10 rows that do not include NAs
+head_auser <- auser_raw[which(complete.cases(auser_raw))[1:10], ]
 
+#make character values for all of the variable names and corresponding units
 Variables <- c("Date", "Rainfall_Gallicano", "Rainfall_Pontetetto", "Rainfall_Monte_Serra", "Rainfall_Orentano", "Rainfall_Borgo_a_Mozzano", "Rainfall_Piaggione", "Rainfall_Calavorno", "Rainfall_Croce_Arcana", "Rainfall_Tereglio_Coreglia_Antelminelli", "Rainfall_Fabbriche_di_Vallico", "Depth_to_Groundwater_LT2", "Depth_to_Groundwater_SAL", "Depth_to_Groundwater_PAG", "Depth_to_Groundwater_CoS", "Depth_to_Groundwater_DIEC", "Temperature_Orentano", "Temperature_Monte_Serra", "Temperature_Ponte_a_Moriano", "Temperature_Lucca_Orto_Botanico", "Volume_POL", "Volume_CC1", "Volume_CC2", "Volume_CSA", "Volume_CSAL", "Hydrometry_Monte_S_Quirico", "Hydrometry_Piaggione")
 Units <- c("Date", "Millimeters", "Millimeters", "Millimeters", "Millimeters", "Millimeters", "Millimeters", "Millimeters", "Millimeters", "Millimeters", "Millimeters", "Meters", "Meters", "Meters", "Meters", "Meters", "Celcius", "Celcius", "Celcius", "Celcius", "IDK", "IDK", "IDK", "IDK", "IDK", "IDK", "IDK")
 
+#make a dataframe with the variables and units
 data_information <- data.frame(Variables, Units)
 
-# data_information$Variables <- gsub(", ", "\n", data_information$Variables)
-# data_information$Units <- gsub(", ", "\n", data_information$Units)
-# 
-# data_information$Variables <- gsub(" ", "\n", data_information$Variables)
-# data_information$Units <- gsub(" ", "\n", data_information$Units)
-
-# Print the table using kbl with manual line breaks
+#print the table using kbl
 kbl(data_information, caption="Acea Group Auser Aquifer Data Structure") %>%
   kable_styling(full_width = FALSE, 
                 position = "center",
@@ -218,18 +215,18 @@ ggplot(auser_rain_long, aes(x=Date,y=Rainfall.Depth, color=Rainfall.location))+
 #ts for each rainfall gauging station
 list_rain_ts <- list()
 
-# Iterate over each monitoring site column
+#iterate over each monitoring site column
 for (i in 2:9) {
-  # Extract the column name
+  #extract the column name
   column_name <- names(auser_rain_subset)[i]
   
-  # Create a time series object for the current monitoring site column
+  #create a time series object for the current monitoring site column
   ts_rain <- ts(auser_rain_subset[, i], start = c(2006, 1, 1), frequency = 365)
   
-  # Assign a unique name to the time series object based on the column name
+  #assign a unique name to the time series object based on the column name
   ts_name <- paste("ts_", column_name, sep = "")
   
-  # Assign the time series object to the list with the unique name
+  #assign the time series object to the list with the unique name
   list_rain_ts[[ts_name]] <- ts_rain
 }
 
@@ -294,23 +291,100 @@ Format your R chunks so that graphs are displayed but code is not displayed. Acc
 
 Each figure should be accompanied by a caption, and referenced within the text if applicable.
 
-```{r, }
+```{r }
+
+#plot the ACF and PACF for south well LT2
+plot_grid(
+  autoplot(Acf(ts_LT2_clean,lag.max=80,plot=FALSE), 
+           main = "TS LT2 Depth to Groundwater") + theme_light(),
+  autoplot(Pacf(ts_LT2_clean,lag.max=80,plot=FALSE), 
+           main = "TS LT2 Depth to Groundwater") + theme_light())
+
+#plot the ACF and PACF for north well SAL
+plot_grid(
+  autoplot(Acf(ts_SAL_clean,lag.max=80,plot=FALSE), 
+           main = "TS SAL Depth to Groundwater") + theme_light(),
+  autoplot(Pacf(ts_SAL_clean,lag.max=80,plot=FALSE), 
+           main = "TS SAL Depth to Groundwater") + theme_light())
+
+```
+
+```{r}
+
+#decompose the time series for south well LT2 using additive and multiplicative methods
+decompose_ts_LT2_add <- decompose(ts_LT2_clean,"additive")
+plot(decompose_ts_LT2_add)
+
+decompose_ts_LT2_mult <- decompose(ts_LT2_clean,"multiplicative")
+plot(decompose_ts_LT2_mult)
+
+#decompose the time series for north well SAL using additive and multiplicative methods
+decompose_ts_SAL_add <- decompose(ts_SAL_clean,"additive")
+plot(decompose_ts_SAL_add)
+
+decompose_ts_SAL_mult <- decompose(ts_SAL_clean,"multiplicative")
+plot(decompose_ts_SAL_mult)
+
+```
+
+```{r}
+
+#HONESTY ZONE EMMA I DONT REALLY UNDERSTAND THIS I COPIED IT FROM ASSIGNMENT 7 ANSWER KEY
+
+#create deseasoned time series objects
+ts_LT2_deseas <- seasadj(decompose_ts_LT2_add)
 
 plot_grid(
-  autoplot(Acf(ts_CoS_clean, lag = 40, plot=FALSE), 
-                main = "CoS depth to GW"),
-  autoplot(Pacf(ts_CoS_clean, lag = 40, plot=FALSE),  
-                  main = "CoS depth to GW")
-)
-#doesn't look like there is seasonality? above 
+  autoplot(Acf(ts_LT2_deseas,lag.max=80,plot=FALSE), 
+           main = "TS LT2 Depth to Groundwater") + theme_light(),
+  autoplot(Pacf(ts_LT2_deseas,lag.max=80,plot=FALSE), 
+           main = "TS LT2 Depth to Groundwater") + theme_light())
+#we do not observe much change in the ACF or PACF plots when we deseason
 
-#looks like there is seasonality for decomposition! 
-decompose_ts_CoS <- decompose(ts_CoS_clean,"additive")
-plot(decompose_ts_CoS)
+print(adf.test(ts_LT2_deseas))
 
-decompose_ts_CoS <- decompose(ts_CoS_clean,"multiplicative")
-plot(decompose_ts_CoS)
+#ADF test shows a p-value of 0.95. We fail to reject the null hypothesis. The deseasoned series may have a stochastic trend.
 
+summary(MannKendall(ts_LT2_deseas))
+
+#Mann Kendall test p-value indicates we should reject the null hypothesis. Data has a deterministic trend.
+
+ts_SAL_deseas <- seasadj(decompose_ts_SAL_add)
+
+plot_grid(
+  autoplot(Acf(ts_SAL_deseas,lag.max=80,plot=FALSE), 
+           main = "TS LT2 Depth to Groundwater") + theme_light(),
+  autoplot(Pacf(ts_SAL_deseas,lag.max=80,plot=FALSE), 
+           main = "TS LT2 Depth to Groundwater") + theme_light())
+#we do not observe much change in the ACF or PACF plots when we deseason
+
+print(adf.test(ts_SAL_deseas))
+
+#ADF test shows a p-value of 0.01. We reject the null hypothesis. The deseasoned series does not have a stochastic trend.
+
+summary(MannKendall(ts_SAL_deseas))
+
+#Mann Kendall test p-value indicates we should reject the null hypothesis. Data has a deterministic trend.
+
+```
+
+```{r}
+
+#auto arima with orginal LT2 series
+LT2_auto <- auto.arima(ts_LT2_clean)
+summary(LT2_auto)
+
+#auto arima with orginal SAL series
+SAL_auto <- auto.arima(ts_SAL_clean)
+summary(SAL_auto)
+
+#auto arima with deseasoned LT2 series
+LT2_deseas_auto <- auto.arima(ts_LT2_deseas,seasonal=FALSE)
+summary(LT2_deseas_auto)
+
+#auto arima with deseasoned SAL series
+SAL_deseas_auto <- auto.arima(ts_SAL_deseas,seasonal=FALSE)
+summary(SAL_deseas_auto)
 
 ```
 
