@@ -133,16 +133,11 @@ data_information <- data.frame(Variables, Units)
 # data_information$Units <- gsub(" ", "\n", data_information$Units)
 
 # Print the table using kbl with manual line breaks
-kbl(data_information, caption="Data Structure: Acea Group Smart Water Analytics Competition on Kaggle") %>%
-  kable_styling(full_width = TRUE, 
+kbl(data_information, caption="Acea Group Auser Aquifer Data Structure") %>%
+  kable_styling(full_width = FALSE, 
                 position = "center",
                 latex_options = "hold_position") %>%
   collapse_rows(column = 2, valign = "top")
-
-kbl(data_information, caption="Data Source and Structure") %>% 
-  kable_styling(full_width = FALSE, 
-                position = "center",
-                latex_options = "hold_position")
 
 ```
 
