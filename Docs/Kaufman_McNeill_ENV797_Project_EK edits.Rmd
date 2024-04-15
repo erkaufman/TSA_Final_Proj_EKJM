@@ -1,0 +1,463 @@
+---
+title: "Kaufman_McNeill_ENV797_Project"
+author: "Emma Kaufman and Jenn McNeill"
+date: "2024-04-10"
+output: pdf_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+
+library(lubridate)
+library(ggplot2)
+library(forecast)  
+library(Kendall)
+library(tseries)
+library(outliers)
+library(tidyverse)
+library(smooth)
+library(dplyr)
+library(cowplot)
+library(corrplot)
+library(kableExtra)
+
+```
+
+#### Introduction, Motivation, Relevance, Objectives
+
+Write a few paragraphs detailing the rationale for your study. This should include both the context of the topic as well as a rationale for your choice of dataset (reason for location, variables, etc.). You may choose to include citations if you like or any other reference you may have used during the project (optional).
+
+#### Dataset information
+
+Provide information on how the dataset for this analysis were collected (source), the data contained in the dataset (format). Describe how you wrangled/processed your dataset to get the time series object.
+
+Add a table that summarizes your data structure (variables, units, ranges and/or central tendencies, data source if multiple are used, etc.). This table should inserted as a `kable` function in an R chunk. Just show the first 10 rows of your data. Do not include the code used to generate your table.
+
+The dataset for this analysis was collected from the [Acea Group Smart Water Analytics Competition on Kaggle](https://www.kaggle.com/c/acea-water-prediction/data). The Acea Group is an Italian utility operator that develops and maintains water networks for 9 million constituents. As a utility operator, they are concerned with preserving water bodies and thus forecasting the water levels at the sources where they get their water. The competition included nine different datasets that represented water springs, lakes, rivers, or aquifers and had unique attributes and characteristics. For our final project, we decided to focus our time series modeling and forecasting on the Auser Aquifer. Our objective is to predict the amount of water in the Auser Aquifer by modeling the depth to groundwater and simultaneously evaluate how other variables such as rainfall, temperature, and treatment plant volume may impact our prediction.
+
+The dataset for the Auser Aquifer includes daily depth to groundwater measurements (in meters) from five different wells across the north and south sectors. Wells SAL, PAG, CoS, and DIEC represent the north while Well LT2 represents the south. We also have daily temperature data at four sites, daily rainfall data at ten sites, and daily volume data from five different water treatment facilities.
+
+```{r import data, include=FALSE}
+
+getwd()
+
+#import data set
+auser_raw <- read.csv(file="./Data/Raw/Aquifer_Auser.csv", header=TRUE)
+
+#change date to date object
+auser_raw$Date <- dmy(auser_raw$Date) 
+
+#make a new dataframe for plotting purposes
+auser_depths <- auser_raw %>%
+  rename(LT2 = Depth_to_Groundwater_LT2,
+         SAL = Depth_to_Groundwater_SAL,
+         PAG = Depth_to_Groundwater_PAG,
+         CoS = Depth_to_Groundwater_CoS,
+         DIEC = Depth_to_Groundwater_DIEC) %>%
+  pivot_longer(LT2:DIEC, names_to = "Well", values_to = "Depth") %>%
+  select(Date, Well, Depth)
+
+#plot all depth to groundwater series together
+ggplot(auser_depths, aes(x=Date, color=Well))+
+  geom_line(aes(y=Depth))+
+  scale_x_date(date_breaks = "2 years", date_labels = "%Y", 
+               limits = c(as.Date("2005-01-01"), as.Date("2021-07-01")),
+               expand = c(0, 0))+
+  xlab("Year")+
+  ylab("Depth to Groundwater (m)")+
+  ggtitle("Raw Data for Depth to Groundwater at Each Well")+
+  theme_light()
+
+#when we look at all the series together, we see that some have values at zero
+#check the tails of all data to see which wells have values at zero
+tail(auser_raw$Depth_to_Groundwater_LT2,50) #has zero values
+tail(auser_raw$Depth_to_Groundwater_SAL,50) #has zero values
+tail(auser_raw$Depth_to_Groundwater_PAG,50) #no zero values
+tail(auser_raw$Depth_to_Groundwater_CoS,50) #has zero values
+tail(auser_raw$Depth_to_Groundwater_DIEC,50) #no zero values
+
+#create a new dataframe where values of zero are converted to NA
+#this makes it so that the tsclean function can remove NAs later
+auser_depths_nas <- auser_raw %>%
+  rename(LT2 = Depth_to_Groundwater_LT2,
+         SAL = Depth_to_Groundwater_SAL,
+         PAG = Depth_to_Groundwater_PAG,
+         CoS = Depth_to_Groundwater_CoS,
+         DIEC = Depth_to_Groundwater_DIEC) %>%
+  select(Date, LT2:DIEC) %>%
+  mutate_at(vars(LT2:DIEC), ~ ifelse(. == 0, NA, .))
+
+#create a dataframe for each well that starts at the unique first day of data
+LT2_depth <- auser_depths_nas %>%
+  select(Date, LT2)%>%
+  slice(2860:8154)
+
+SAL_depth <- auser_depths_nas %>%
+  select(Date, SAL)%>%
+  slice(3320:8154)
+
+PAG_depth <- auser_depths_nas %>%
+  select(Date, PAG)%>%
+  slice(3956:8154)
+
+CoS_depth <- auser_depths_nas %>%
+  select(Date, CoS)  %>%
+  slice(3614:8154)
+
+DIEC_depth <- auser_depths_nas %>% 
+  select(Date, DIEC) %>%
+  slice(4687:8154) 
+
+#create a start date object for each well
+start_LT2 <- as.Date("2006-01-01")
+start_SAL <- as.Date("2007-04-06")
+start_PAG <- as.Date("2009-01-01")
+start_CoS <- as.Date("2008-01-25")
+start_DIEC <- as.Date("2011-01-02")
+
+```
+
+```{r}
+
+#show the head of 10 rows that do not include NAs
+head_auser <- auser_raw[which(complete.cases(auser_raw))[1:10], ]
+
+#make character values for all of the variable names and corresponding units
+Variables <- c("Date", "Rainfall_Gallicano", "Rainfall_Pontetetto", "Rainfall_Monte_Serra", "Rainfall_Orentano", "Rainfall_Borgo_a_Mozzano", "Rainfall_Piaggione", "Rainfall_Calavorno", "Rainfall_Croce_Arcana", "Rainfall_Tereglio_Coreglia_Antelminelli", "Rainfall_Fabbriche_di_Vallico", "Depth_to_Groundwater_LT2", "Depth_to_Groundwater_SAL", "Depth_to_Groundwater_PAG", "Depth_to_Groundwater_CoS", "Depth_to_Groundwater_DIEC", "Temperature_Orentano", "Temperature_Monte_Serra", "Temperature_Ponte_a_Moriano", "Temperature_Lucca_Orto_Botanico", "Volume_POL", "Volume_CC1", "Volume_CC2", "Volume_CSA", "Volume_CSAL", "Hydrometry_Monte_S_Quirico", "Hydrometry_Piaggione")
+Units <- c("Date", "Millimeters", "Millimeters", "Millimeters", "Millimeters", "Millimeters", "Millimeters", "Millimeters", "Millimeters", "Millimeters", "Millimeters", "Meters", "Meters", "Meters", "Meters", "Meters", "Celcius", "Celcius", "Celcius", "Celcius", "Cubic Meters", "Cubic Meters", "Cubic Meters", "Cubic Meters", "Cubic Meters", "Meters", "Meters")
+
+#make a dataframe with the variables and units
+data_information <- data.frame(Variables, Units)
+
+#print the table using kbl
+kbl(data_information, caption="Acea Group Auser Aquifer Data Structure") %>%
+  kable_styling(full_width = FALSE, 
+                position = "center",
+                latex_options = "hold_position") %>%
+  collapse_rows(column = 2, valign = "top")
+
+```
+
+The first obstacle with wrangling our data came when we realized that the data for each variable started at a different date. We found this issue by plotting the five depth to groundwater lines and seeing a large lag before the data started, NA values within each series, and a few random "zero" values that we assumed to be errors. To rectify this issue, we converted all "zero" values to NA, found the start date for each well's data, and then converted each well's data into a time series object. When we plotted these five time series together, we still had gaps of NA data. We ran the tsclean() function to fill in the gaps of missing data with interpolated values and then had five clean series with no data gaps.
+
+```{r}
+
+#create a time series object of the values for depth to groundwater for each well
+#start the time series at the same unique first day of data as above
+ts_LT2 <- ts(LT2_depth[,2],start=c(2006,01,01), frequency=365)
+ts_SAL <- ts(SAL_depth[,2],start=c(2007,04,06), frequency=365)
+ts_PAG <- ts(PAG_depth[,2],start=c(2009,01,01), frequency=365)
+ts_CoS <- ts(CoS_depth[,2], start = c(2008,01,25), frequency= 365)
+ts_DIEC <- ts(DIEC_depth[,2], start = c(2011,01,02), frequency= 365)
+
+#plot all time series together
+autoplot(ts_LT2, series = "LT2")+
+  autolayer(ts_SAL, series = "SAL")+
+  autolayer(ts_PAG, series = "PAG")+
+  autolayer(ts_CoS, series = "CoS")+
+  autolayer(ts_DIEC, series = "DIEC")+
+  labs(x = "Year", y = "Depth to Groundwater (m)", color = "Well")+
+  theme_light()+
+  ggtitle("Time Series of Depth to Groundwater at Each Well")+
+  scale_x_continuous(name = "Year", breaks = seq(from=2006, to=2022, by=2))+
+  scale_y_continuous(name = "Depth to Groundwater (m)", 
+                     breaks = seq(from=-16, to=0, by=2))
+
+#run the clean function on each time series to replace NAs
+ts_LT2_clean <- tsclean(ts_LT2)
+ts_SAL_clean <- tsclean(ts_SAL)
+ts_PAG_clean <- tsclean(ts_PAG)
+ts_CoS_clean <- tsclean(ts_CoS)
+ts_DIEC_clean <- tsclean(ts_DIEC)
+
+#plot all cleaned time series together
+autoplot(ts_LT2_clean, series = "LT2")+
+  autolayer(ts_SAL_clean, series = "SAL")+
+  autolayer(ts_PAG_clean, series = "PAG")+
+  autolayer(ts_CoS_clean, series = "CoS")+
+  autolayer(ts_DIEC_clean, series = "DIEC")+
+  labs(x = "Year", y = "Depth to Groundwater (m)", color = "Well")+
+  theme_light()+
+  ggtitle("Cleaned Time Series of Depth to Groundwater at Each Well")+
+  scale_x_continuous(name = "Year", breaks = seq(from=2006, to=2022, by=2))+
+  scale_y_continuous(name = "Depth to Groundwater (m)", 
+                     breaks = seq(from=-16, to=0, by=2))
+
+```
+
+We followed the same process for the other variables (rainfall, temperature, and volume) so that we had clean time series objects that could be used as exogenous variables later on in the modeling and forecasting portion of our process.
+
+[For rainfall data we looked at the monitoring sites that had continuous data]
+
+```{r}
+#create a dataframe with date and rainfall data
+auser_rain <- auser_raw %>% 
+  slice(2860:8154) %>% 
+  select(Date:Rainfall_Fabbriche_di_Vallico)
+
+#create a start date object for rainfall
+start_rain <- as.Date("2006-01-01")
+
+#find and print the row and column indices of NA values
+na_indices_rain <- which(is.na(auser_rain), arr.ind = TRUE)
+print(na_indices_rain)
+
+#remove the monitoring sites that don't have continuous data, columns 4 and 7
+auser_rain_subset <- auser_rain[, !(names(auser_rain) %in% c("Rainfall_Monte_Serra", "Rainfall_Piaggione"))]
+
+auser_rain_long <- pivot_longer(auser_rain_subset, Rainfall_Gallicano:Rainfall_Fabbriche_di_Vallico, names_to = "Rainfall.location", values_to = "Rainfall.Depth")
+
+#plotting rainfall, need to fill in na and then make TS
+ggplot(auser_rain_long, aes(x=Date,y=Rainfall.Depth, color=Rainfall.location))+ 
+  geom_line()
+
+#ts for each rainfall gauging station
+list_rain_ts <- list()
+
+#iterate over each monitoring site column
+for (i in 2:9) {
+  #extract the column name
+  column_name <- names(auser_rain_subset)[i]
+  
+  #create a time series object for the current monitoring site column
+  ts_rain <- ts(auser_rain_subset[, i], start = c(2006, 1, 1), frequency = 365)
+  
+  #assign a unique name to the time series object based on the column name
+  ts_name <- paste("ts_", column_name, sep = "")
+  
+  #assign the time series object to the list with the unique name
+  list_rain_ts[[ts_name]] <- ts_rain
+}
+
+#plotting some of the rainfall data
+autoplot(list_rain_ts$ts_Rainfall_Orentano)
+
+```
+
+```{r}
+#create a dataframe with date and temperature data
+auser_temp <- auser_raw %>% 
+  select(Date,Temperature_Orentano:Temperature_Lucca_Orto_Botanico)
+
+#create a start date object for temperature
+start_temp <- as.Date("1998-03-05")
+
+#note: 0 is essentially NA for the beginning rows, true zero is 0.0
+```
+
+```{r}
+#create a dataframe with date and volume data
+auser_volume <- auser_raw %>% 
+  slice(2495:8154) %>% 
+  select(Date,Volume_POL:Volume_CSAL)  %>%
+  mutate_at(vars(Volume_POL:Volume_CSAL), ~ ifelse(. == 0, NA, .))
+
+#create a start date object for volume
+start_volume <- as.Date("2005-01-01")
+start_volume_CSA_CSAL <- as.Date("2014-01-01")
+
+```
+
+The last bit of data wrangling that we performed was running the correlation function on our groundwater data to discern whether the depth to groundwater values at the five wells were correlated to one another. We found that the four north wells had similar correlation values to one another and that the one south well was weakly correlated to the others. Our correlation plot
+
+```{r correlation plots}
+
+#looking at initial correlation of groundwater wells
+auser_subset <- auser_raw %>%
+  rename(LT2 = Depth_to_Groundwater_LT2,
+         SAL = Depth_to_Groundwater_SAL,
+         PAG = Depth_to_Groundwater_PAG,
+         CoS = Depth_to_Groundwater_CoS,
+         DIEC = Depth_to_Groundwater_DIEC) %>%
+  select(LT2:DIEC) %>%
+  na.omit()
+
+#how correlated are the different groundwater wells within one aquifer?
+auser_correlation <- cor(auser_subset)
+corrplot(auser_correlation, method = "ellipse")
+corrplot.mixed(auser_correlation, upper = "ellipse")
+
+```
+
+#### Analysis (Methods and Models)
+
+Describe the analysis and tests that were performed. Described the components of the time series you identified. List any packages and functions used. Include visualizations of your dataset (i.e. time series plot, ACF, PACF, etc).
+
+Format your R chunks so that graphs are displayed but code is not displayed. Accompany these graphs with text sections that describe the visualizations and provide context for further analyses.
+
+Each figure should be accompanied by a caption, and referenced within the text if applicable.
+
+```{r }
+
+#plot the ACF and PACF for south well LT2
+plot_grid(
+  autoplot(Acf(ts_LT2_clean,lag.max=80,plot=FALSE), 
+           main = "TS LT2 Depth to Groundwater") + theme_light(),
+  autoplot(Pacf(ts_LT2_clean,lag.max=80,plot=FALSE), 
+           main = "TS LT2 Depth to Groundwater") + theme_light())
+
+#plot the ACF and PACF for north well SAL
+plot_grid(
+  autoplot(Acf(ts_SAL_clean,lag.max=80,plot=FALSE), 
+           main = "TS SAL Depth to Groundwater") + theme_light(),
+  autoplot(Pacf(ts_SAL_clean,lag.max=80,plot=FALSE), 
+           main = "TS SAL Depth to Groundwater") + theme_light())
+
+```
+
+```{r}
+
+#decompose the time series for south well LT2 using additive and multiplicative methods
+decompose_ts_LT2_add <- decompose(ts_LT2_clean,"additive")
+plot(decompose_ts_LT2_add)
+
+decompose_ts_LT2_mult <- decompose(ts_LT2_clean,"multiplicative")
+plot(decompose_ts_LT2_mult)
+
+#decompose the time series for north well SAL using additive and multiplicative methods
+decompose_ts_SAL_add <- decompose(ts_SAL_clean,"additive")
+plot(decompose_ts_SAL_add)
+
+decompose_ts_SAL_mult <- decompose(ts_SAL_clean,"multiplicative")
+plot(decompose_ts_SAL_mult)
+
+```
+
+```{r}
+
+#HONESTY ZONE EMMA I DONT REALLY UNDERSTAND THIS I COPIED IT FROM ASSIGNMENT 7 ANSWER KEY
+
+#create deseasoned time series objects
+ts_LT2_deseas <- seasadj(decompose_ts_LT2_add)
+
+plot_grid(
+  autoplot(Acf(ts_LT2_deseas,lag.max=80,plot=FALSE), 
+           main = "TS LT2 Depth to Groundwater") + theme_light(),
+  autoplot(Pacf(ts_LT2_deseas,lag.max=80,plot=FALSE), 
+           main = "TS LT2 Depth to Groundwater") + theme_light())
+#we do not observe much change in the ACF or PACF plots when we deseason
+
+print(adf.test(ts_LT2_deseas))
+
+#ADF test shows a p-value of 0.95. We fail to reject the null hypothesis. The deseasoned series may have a stochastic trend.
+
+summary(MannKendall(ts_LT2_deseas))
+
+#Mann Kendall test p-value indicates we should reject the null hypothesis. Data has a deterministic trend.
+
+ts_SAL_deseas <- seasadj(decompose_ts_SAL_add)
+
+plot_grid(
+  autoplot(Acf(ts_SAL_deseas,lag.max=80,plot=FALSE), 
+           main = "TS LT2 Depth to Groundwater") + theme_light(),
+  autoplot(Pacf(ts_SAL_deseas,lag.max=80,plot=FALSE), 
+           main = "TS LT2 Depth to Groundwater") + theme_light())
+#we do not observe much change in the ACF or PACF plots when we deseason
+
+print(adf.test(ts_SAL_deseas))
+
+#ADF test shows a p-value of 0.01. We reject the null hypothesis. The deseasoned series does not have a stochastic trend.
+
+summary(MannKendall(ts_SAL_deseas))
+
+#Mann Kendall test p-value indicates we should reject the null hypothesis. Data has a deterministic trend.
+
+```
+
+```{r}
+
+#auto arima with orginal LT2 series
+LT2_auto <- auto.arima(ts_LT2_clean)
+summary(LT2_auto)
+
+#auto arima with orginal SAL series
+SAL_auto <- auto.arima(ts_SAL_clean)
+summary(SAL_auto)
+
+#auto arima with deseasoned LT2 series
+LT2_deseas_auto <- auto.arima(ts_LT2_deseas,seasonal=FALSE)
+summary(LT2_deseas_auto)
+
+#auto arima with deseasoned SAL series
+SAL_deseas_auto <- auto.arima(ts_SAL_deseas,seasonal=FALSE)
+summary(SAL_deseas_auto)
+
+```
+
+
+```{r subset daily time series}
+
+# create a subset of the time series that excludes one month
+n_for = 365
+LT2_daily_training <- subset(ts_LT2_clean, end = length(ts_LT2_clean) - n_for)
+
+# create a subset of the time series that only includes the last 365 days
+LT2_daily_testing <- subset(ts_LT2_clean, start = length(ts_LT2_clean) - n_for)
+
+autoplot(LT2_daily_training)
+autoplot(LT2_daily_testing)
+```
+
+```{r STL + ETS Model}
+
+# fit and forecast STL + ETS model to data
+ETS_fit <-  stlf(LT2_daily_training, h = 365)
+
+# plot foresting results
+autoplot(ETS_fit) + 
+  ylab("depth to groundwater (meters)") + 
+  theme_light()
+
+# plot model + observed data
+autoplot(ts_LT2_clean, series = "Original") +
+  autolayer(ETS_fit, series = "STL + ETS", PI = FALSE) +
+  ylab("depth to groundwater (meters)") +
+  theme_light()
+
+# check the MAPE
+STL_ETS_scores <- accuracy(ETS_fit$mean, LT2_daily_testing)
+print(STL_ETS_scores)
+
+STL_ETS_forecast <- ETS_fit$mean
+print(STL_ETS_forecast)
+
+getwd()
+submission_template <- read.csv(file="./submission_template.csv", header=TRUE)
+submission_template$date <- as.Date(submission_template$date, format = "%m/%d/%y")
+submission_template$load <- STL_ETS_forecast
+write.table(submission_template, "submission.csv", sep = ",", row.names = FALSE, quote = FALSE)
+
+```
+
+```{r ARIMA and Fourier Model 1}
+
+ARIMA_Fourier_fit_1 <- auto.arima(ts_daily_training, 
+                             seasonal = FALSE, 
+                             lambda = 0,
+                             xreg = fourier(ts_daily_training, 
+                                            K=c(2,12)))
+
+ARIMA_Fourier_forecast_1 <- forecast(ARIMA_Fourier_fit_1,
+                                   xreg=fourier(ts_daily_training,
+                                                K = c(2,12), h = 31), h=31) 
+
+# plot foresting results
+autoplot(ARIMA_Fourier_forecast_1) + 
+  ylab("Daily Load") + 
+  theme_light()
+
+# plot model + observed data
+autoplot(ts_daily, series = "Original") +
+  autolayer(ARIMA_Fourier_forecast_1, series = "ARIMA FOURIER 1", PI = FALSE) +
+  ylab("Daily Load") +
+  theme_light()
+
+# check the MAPE
+ARIMA_Fourier_scores_1 <- accuracy(ARIMA_Fourier_forecast_1$mean, ts_daily_testing)
+ARIMA_Fourier_scores_1
+
+forecast_1 <- as.numeric(ARIMA_Fourier_forecast_1$mean)
+print(forecast_1)
+
+```
