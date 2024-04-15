@@ -29,13 +29,14 @@ library(kableExtra)
 Write a few paragraphs detailing the rationale for your study. This should include both the context of the topic as well as a rationale for your choice of dataset (reason for location, variables, etc.). You may choose to include citations if you like or any other reference you may have used during the project (optional).
 
 #### Dataset information
+
 Provide information on how the dataset for this analysis were collected (source), the data contained in the dataset (format). Describe how you wrangled/processed your dataset to get the time series object.
 
 Add a table that summarizes your data structure (variables, units, ranges and/or central tendencies, data source if multiple are used, etc.). This table should inserted as a `kable` function in an R chunk. Just show the first 10 rows of your data. Do not include the code used to generate your table.
 
-The dataset for this analysis was collected from the [Acea Group Smart Water Analytics Competition on Kaggle](https://www.kaggle.com/c/acea-water-prediction/data). The Acea Group is an Italian utility operator that develops and maintains water networks for 9 million constituents. As a utility operator, they are concerned with preserving water bodies and thus forecasting the water levels at the sources where they get their water. The competition included nine different datasets that represented water springs, lakes, rivers, or aquifers and had unique attributes and characteristics. For our final project, we decided to focus our time series modeling and forecasting on the Auser Aquifer. Our objective is to predict the amount of water in the Auser Aquifer by modeling the depth to groundwater and simultaneously evaluate how other variables such as rainfall, temperature, and treatment plant volume may impact our prediction. 
+The dataset for this analysis was collected from the [Acea Group Smart Water Analytics Competition on Kaggle](https://www.kaggle.com/c/acea-water-prediction/data). The Acea Group is an Italian utility operator that develops and maintains water networks for 9 million constituents. As a utility operator, they are concerned with preserving water bodies and thus forecasting the water levels at the sources where they get their water. The competition included nine different datasets that represented water springs, lakes, rivers, or aquifers and had unique attributes and characteristics. For our final project, we decided to focus our time series modeling and forecasting on the Auser Aquifer. Our objective is to predict the amount of water in the Auser Aquifer by modeling the depth to groundwater and simultaneously evaluate how other variables such as rainfall, temperature, and treatment plant volume may impact our prediction.
 
-The dataset for the Auser Aquifer includes daily depth to groundwater measurements (in meters) from five different wells across the north and south sectors. Wells SAL, PAG, CoS, and DIEC represent the north while Well LT2 represents the south. We also have daily temperature data at four sites, daily rainfall data at ten sites, and daily volume data from five different water treatment facilities. 
+The dataset for the Auser Aquifer includes daily depth to groundwater measurements (in meters) from five different wells across the north and south sectors. Wells SAL, PAG, CoS, and DIEC represent the north while Well LT2 represents the south. We also have daily temperature data at four sites, daily rainfall data at ten sites, and daily volume data from five different water treatment facilities.
 
 ```{r import data, include=FALSE}
 
@@ -124,7 +125,7 @@ head_auser <- auser_raw[which(complete.cases(auser_raw))[1:10], ]
 
 #make character values for all of the variable names and corresponding units
 Variables <- c("Date", "Rainfall_Gallicano", "Rainfall_Pontetetto", "Rainfall_Monte_Serra", "Rainfall_Orentano", "Rainfall_Borgo_a_Mozzano", "Rainfall_Piaggione", "Rainfall_Calavorno", "Rainfall_Croce_Arcana", "Rainfall_Tereglio_Coreglia_Antelminelli", "Rainfall_Fabbriche_di_Vallico", "Depth_to_Groundwater_LT2", "Depth_to_Groundwater_SAL", "Depth_to_Groundwater_PAG", "Depth_to_Groundwater_CoS", "Depth_to_Groundwater_DIEC", "Temperature_Orentano", "Temperature_Monte_Serra", "Temperature_Ponte_a_Moriano", "Temperature_Lucca_Orto_Botanico", "Volume_POL", "Volume_CC1", "Volume_CC2", "Volume_CSA", "Volume_CSAL", "Hydrometry_Monte_S_Quirico", "Hydrometry_Piaggione")
-Units <- c("Date", "Millimeters", "Millimeters", "Millimeters", "Millimeters", "Millimeters", "Millimeters", "Millimeters", "Millimeters", "Millimeters", "Millimeters", "Meters", "Meters", "Meters", "Meters", "Meters", "Celcius", "Celcius", "Celcius", "Celcius", "IDK", "IDK", "IDK", "IDK", "IDK", "IDK", "IDK")
+Units <- c("Date", "Millimeters", "Millimeters", "Millimeters", "Millimeters", "Millimeters", "Millimeters", "Millimeters", "Millimeters", "Millimeters", "Millimeters", "Meters", "Meters", "Meters", "Meters", "Meters", "Celcius", "Celcius", "Celcius", "Celcius", "Cubic Meters", "Cubic Meters", "Cubic Meters", "Cubic Meters", "Cubic Meters", "Meters", "Meters")
 
 #make a dataframe with the variables and units
 data_information <- data.frame(Variables, Units)
@@ -138,8 +139,7 @@ kbl(data_information, caption="Acea Group Auser Aquifer Data Structure") %>%
 
 ```
 
-
-The first obstacle with wrangling our data came when we realized that the data for each variable started at a different date. We found this issue by plotting the five depth to groundwater lines and seeing a large lag before the data started, NA values within each series, and a few random "zero" values that we assumed to be errors. To rectify this issue, we converted all "zero" values to NA, found the start date for each well's data, and then converted each well's data into a time series object. When we plotted these five time series together, we still had gaps of NA data. We ran the tsclean() function to fill in the gaps of missing data with interpolated values and then had five clean series with no data gaps. 
+The first obstacle with wrangling our data came when we realized that the data for each variable started at a different date. We found this issue by plotting the five depth to groundwater lines and seeing a large lag before the data started, NA values within each series, and a few random "zero" values that we assumed to be errors. To rectify this issue, we converted all "zero" values to NA, found the start date for each well's data, and then converted each well's data into a time series object. When we plotted these five time series together, we still had gaps of NA data. We ran the tsclean() function to fill in the gaps of missing data with interpolated values and then had five clean series with no data gaps.
 
 ```{r}
 
@@ -235,7 +235,6 @@ autoplot(list_rain_ts$ts_Rainfall_Orentano)
 
 ```
 
-
 ```{r}
 #create a dataframe with date and temperature data
 auser_temp <- auser_raw %>% 
@@ -246,7 +245,6 @@ start_temp <- as.Date("1998-03-05")
 
 #note: 0 is essentially NA for the beginning rows, true zero is 0.0
 ```
-
 
 ```{r}
 #create a dataframe with date and volume data
@@ -261,7 +259,7 @@ start_volume_CSA_CSAL <- as.Date("2014-01-01")
 
 ```
 
-The last bit of data wrangling that we performed was running the correlation function on our groundwater data to discern whether the depth to groundwater values at the five wells were correlated to one another. We found that the four north wells had similar correlation values to one another and that the one south well was weakly correlated to the others. Our correlation plot 
+The last bit of data wrangling that we performed was running the correlation function on our groundwater data to discern whether the depth to groundwater values at the five wells were correlated to one another. We found that the four north wells had similar correlation values to one another and that the one south well was weakly correlated to the others. Our correlation plot
 
 ```{r correlation plots}
 
@@ -282,10 +280,9 @@ corrplot.mixed(auser_correlation, upper = "ellipse")
 
 ```
 
-
 #### Analysis (Methods and Models)
 
-Describe the analysis and tests that were performed. Described the components of the time series you identified. List any packages and functions used. Include visualizations of your dataset (i.e. time series plot, ACF, PACF, etc). 
+Describe the analysis and tests that were performed. Described the components of the time series you identified. List any packages and functions used. Include visualizations of your dataset (i.e. time series plot, ACF, PACF, etc).
 
 Format your R chunks so that graphs are displayed but code is not displayed. Accompany these graphs with text sections that describe the visualizations and provide context for further analyses.
 
@@ -387,4 +384,3 @@ SAL_deseas_auto <- auto.arima(ts_SAL_deseas,seasonal=FALSE)
 summary(SAL_deseas_auto)
 
 ```
-
