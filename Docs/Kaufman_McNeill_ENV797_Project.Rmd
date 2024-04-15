@@ -384,3 +384,80 @@ SAL_deseas_auto <- auto.arima(ts_SAL_deseas,seasonal=FALSE)
 summary(SAL_deseas_auto)
 
 ```
+
+
+```{r subset daily time series}
+
+# create a subset of the time series that excludes one month
+n_for = 365
+LT2_daily_training <- subset(ts_LT2_clean, end = length(ts_LT2_clean) - n_for)
+
+# create a subset of the time series that only includes the last 365 days
+LT2_daily_testing <- subset(ts_LT2_clean, start = length(ts_LT2_clean) - n_for)
+
+autoplot(LT2_daily_training)
+autoplot(LT2_daily_testing)
+```
+
+```{r STL + ETS Model}
+
+# fit and forecast STL + ETS model to data
+ETS_fit <-  stlf(LT2_daily_training, h = 365)
+
+# plot foresting results
+autoplot(ETS_fit) + 
+  ylab("depth to groundwater (meters)") + 
+  theme_light()
+
+# plot model + observed data
+autoplot(ts_LT2_clean, series = "Original") +
+  autolayer(ETS_fit, series = "STL + ETS", PI = FALSE) +
+  ylab("depth to groundwater (meters)") +
+  theme_light()
+
+# check the MAPE
+STL_ETS_scores <- accuracy(ETS_fit$mean, LT2_daily_testing)
+print(STL_ETS_scores)
+
+STL_ETS_forecast <- ETS_fit$mean
+print(STL_ETS_forecast)
+
+getwd()
+submission_template <- read.csv(file="./submission_template.csv", header=TRUE)
+submission_template$date <- as.Date(submission_template$date, format = "%m/%d/%y")
+submission_template$load <- STL_ETS_forecast
+write.table(submission_template, "submission.csv", sep = ",", row.names = FALSE, quote = FALSE)
+
+```
+
+```{r ARIMA and Fourier Model 1}
+
+ARIMA_Fourier_fit_1 <- auto.arima(ts_daily_training, 
+                             seasonal = FALSE, 
+                             lambda = 0,
+                             xreg = fourier(ts_daily_training, 
+                                            K=c(2,12)))
+
+ARIMA_Fourier_forecast_1 <- forecast(ARIMA_Fourier_fit_1,
+                                   xreg=fourier(ts_daily_training,
+                                                K = c(2,12), h = 31), h=31) 
+
+# plot foresting results
+autoplot(ARIMA_Fourier_forecast_1) + 
+  ylab("Daily Load") + 
+  theme_light()
+
+# plot model + observed data
+autoplot(ts_daily, series = "Original") +
+  autolayer(ARIMA_Fourier_forecast_1, series = "ARIMA FOURIER 1", PI = FALSE) +
+  ylab("Daily Load") +
+  theme_light()
+
+# check the MAPE
+ARIMA_Fourier_scores_1 <- accuracy(ARIMA_Fourier_forecast_1$mean, ts_daily_testing)
+ARIMA_Fourier_scores_1
+
+forecast_1 <- as.numeric(ARIMA_Fourier_forecast_1$mean)
+print(forecast_1)
+
+```
