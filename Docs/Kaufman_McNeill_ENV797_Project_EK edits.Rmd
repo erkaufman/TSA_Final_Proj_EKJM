@@ -413,6 +413,7 @@ autoplot(LT2_daily_testing2)
 
 # fit and forecast STL + ETS model to data
 ETS_fit2 <-  stlf(LT2_daily_training2, h = 30)
+ETS_fit <-  stlf(LT2_daily_training, h = 365)
 
 # plot foresting results
 autoplot(ETS_fit2) + 
@@ -432,15 +433,42 @@ print(STL_ETS_scores2)
 STL_ETS_forecast2 <- ETS_fit2$mean
 print(STL_ETS_forecast2)
 
+STL_ETS_scores <- accuracy(ETS_fit$mean, LT2_daily_testing)
+print(STL_ETS_scores)
+
+STL_ETS_forecast <- ETS_fit$mean
+print(STL_ETS_forecast)
+
 getwd()
-submission_template <- read.csv(file="./submission_template.csv", header=TRUE)
-submission_template$date <- as.Date(submission_template$date, format = "%m/%d/%y")
-submission_template$load <- STL_ETS_forecast
-write.table(submission_template, "submission.csv", sep = ",", row.names = FALSE, quote = FALSE)
+# submission_template <- read.csv(file="./submission_template.csv", header=TRUE)
+# submission_template$date <- as.Date(submission_template$date, format = "%m/%d/%y")
+# submission_template$load <- STL_ETS_forecast
+# write.table(submission_template, "submission.csv", sep = ",", row.names = FALSE, quote = FALSE)
 
 ```
 
 ```{r}
+#fitting to all of the data
+SSES_seas_year <- es(ts_LT2_clean,model="ZZZ",h=n_for,holdout=TRUE)
+plot(SSES_seas_year)
+checkresiduals(SSES_seas_year)
+SSES_scores_year <- accuracy(SSES_seas_year$forecast,LT2_daily_testing) 
+seas_scores <- as.data.frame(rbind(SSES_scores_year))
+row.names(seas_scores) <- c("SSES")
+
+#plotting year forescast for stl + ets and sses
+autoplot(ts_LT2_clean) +
+  autolayer(SSES_seas_year$forecast, series="SSES") +
+  autolayer(ETS_fit, series = "STL + ETS", PI = FALSE) +
+  xlab("Year") + ylab("Depth to GW (m)") +
+  guides(colour=guide_legend(title="Forecast"))+
+  theme_light()+
+  labs(title="Forecast")
+
+```
+
+
+```{r SSES model}
 # Create a variable with number of steps ahead we will forecast
 # This is helpful whenever you need to change forecasting horizon you only need to change it here
 n_for_month <- 30 #play with this, change to 12, 23, 2 and check of the best model is still the same
@@ -452,7 +480,7 @@ ts_LT2_month <- subset(ts_LT2_clean, end = length(ts_LT2_clean) - n_for_month)
 last_obs <- subset(ts_LT2_clean, start = length(ts_LT2_clean) - n_for_month)
 
 #fitting to all of the data
-SSES_seas <- es(ts_LT2_clean,model="ZZZ",h=n_for,holdout=TRUE)
+SSES_seas <- es(ts_LT2_month,model="ZZZ",h=n_for_month,holdout=TRUE)
 plot(SSES_seas)
 checkresiduals(SSES_seas)
 
@@ -464,11 +492,23 @@ seas_scores <- as.data.frame(rbind(SSES_scores))
 row.names(seas_scores) <- c("SSES")
 
 #could add more models to this, and more results in the above dataframe to compare MAPE values
-autoplot(ts_LT2_clean) +
+autoplot(ts_LT2_clean,xlim = c("2020-01-01", "2020-06-30")) +
   autolayer(SSES_seas$forecast, series="SSES") +
   autolayer(ETS_fit2, series = "STL + ETS", PI = FALSE) +
-  xlab("Month") + ylab("Depth to GW") +
-  guides(colour=guide_legend(title="Forecast"))
+  xlab("Year") + ylab("Depth to GW (m)") +
+  guides(colour=guide_legend(title="Forecast"))+
+  theme_light()
+  #
+  #xlim(as.Date("2020-01-01"), as.Date("2020-06-30"))
+
+#plotting fit to og
+autoplot(ts_LT2_clean, series="original", color='black')+
+  autolayer(SSES_seas$fitted, series='SSES') +
+  theme_light()+
+  labs(y='Depth to GW (m)', 
+       title='Model fit to original data',
+       x='Year')
+  
 ```
 
 ```{r ARIMA and Fourier Model 1}
