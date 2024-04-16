@@ -184,6 +184,16 @@ autoplot(ts_LT2_clean, series = "LT2")+
   scale_y_continuous(name = "Depth to Groundwater (m)", 
                      breaks = seq(from=-16, to=0, by=2))
 
+#plot only the wells of interest
+autoplot(ts_LT2_clean, series = "LT2")+
+  autolayer(ts_SAL_clean, series = "SAL")+
+  labs(x = "Year", y = "Depth to Groundwater (m)", color = "Well")+
+  theme_light()+
+  ggtitle("Cleaned Time Series of Depth to Groundwater at Each Well")+
+  scale_x_continuous(name = "Year", breaks = seq(from=2006, to=2022, by=2))+
+  scale_y_continuous(name = "Depth to Groundwater (m)", 
+                     breaks = seq(from=-16, to=0, by=2))
+
 ```
 
 We followed the same process for the other variables (rainfall, temperature, and volume) so that we had clean time series objects that could be used as exogenous variables later on in the modeling and forecasting portion of our process.
@@ -332,9 +342,9 @@ plot(decompose_ts_SAL_mult)
 ts_LT2_deseas <- seasadj(decompose_ts_LT2_add)
 
 plot_grid(
-  autoplot(Acf(ts_LT2_deseas,lag.max=80,plot=FALSE), 
+  autoplot(Acf(ts_LT2_deseas,lag.max=1825,plot=FALSE), 
            main = "TS LT2 Depth to Groundwater") + theme_light(),
-  autoplot(Pacf(ts_LT2_deseas,lag.max=80,plot=FALSE), 
+  autoplot(Pacf(ts_LT2_deseas,lag.max=1825,plot=FALSE), 
            main = "TS LT2 Depth to Groundwater") + theme_light())
 #we do not observe much change in the ACF or PACF plots when we deseason
 
@@ -349,9 +359,9 @@ summary(MannKendall(ts_LT2_deseas))
 ts_SAL_deseas <- seasadj(decompose_ts_SAL_add)
 
 plot_grid(
-  autoplot(Acf(ts_SAL_deseas,lag.max=80,plot=FALSE), 
+  autoplot(Acf(ts_SAL_deseas,lag.max=1825,plot=FALSE), 
            main = "TS LT2 Depth to Groundwater") + theme_light(),
-  autoplot(Pacf(ts_SAL_deseas,lag.max=80,plot=FALSE), 
+  autoplot(Pacf(ts_SAL_deseas,lag.max=1825,plot=FALSE), 
            main = "TS LT2 Depth to Groundwater") + theme_light())
 #we do not observe much change in the ACF or PACF plots when we deseason
 
@@ -362,6 +372,15 @@ print(adf.test(ts_SAL_deseas))
 summary(MannKendall(ts_SAL_deseas))
 
 #Mann Kendall test p-value indicates we should reject the null hypothesis. Data has a deterministic trend.
+
+autoplot(ts_LT2_deseas, series = "LT2")+
+  autolayer(ts_SAL_deseas, series = "SAL")+
+  labs(x = "Year", y = "Depth to Groundwater (m)", color = "Well")+
+  theme_light()+
+  ggtitle("Deseasoned Time Series of Depth to Groundwater")+
+  scale_x_continuous(name = "Year", breaks = seq(from=2006, to=2022, by=2))+
+  scale_y_continuous(name = "Depth to Groundwater (m)", 
+                     breaks = seq(from=-16, to=0, by=2))
 
 ```
 
