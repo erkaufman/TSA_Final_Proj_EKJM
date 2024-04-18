@@ -26,6 +26,7 @@ library(kableExtra)
 
 #### Introduction, Motivation, Relevance, Objectives
 
+
 Write a few paragraphs detailing the rationale for your study. This should include both the context of the topic as well as a rationale for your choice of dataset (reason for location, variables, etc.). You may choose to include citations if you like or any other reference you may have used during the project (optional).
 
 #### Dataset information
