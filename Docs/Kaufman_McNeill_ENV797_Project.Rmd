@@ -477,38 +477,35 @@ autoplot(SAL_daily_testing)
 
 ```{r ETS Model}
 
-# fit and forecast ETS model to data
-ETS_fit <-  stlf(LT2_daily_training, h = 365)
+# fit ETS model to LT2
+ETS_LT2 <-  ets(LT2_daily_training, h = 365)
 
 # plot foresting results
-autoplot(ETS_fit) + 
+autoplot(ETS_LT2) + 
   ylab("depth to groundwater (meters)") + 
   theme_light()
 
 # plot model + observed data
 autoplot(ts_LT2_clean, series = "Original") +
-  autolayer(ETS_fit, series = "STL + ETS", PI = FALSE) +
+  autolayer(ETS_LT2, series = "ETS", PI = FALSE) +
   ylab("depth to groundwater (meters)") +
   theme_light()
 
 # check the MAPE
-STL_ETS_scores <- accuracy(ETS_fit$mean, LT2_daily_testing)
-print(STL_ETS_scores)
+ETS_LT2_scores <- accuracy(ETS_LT2$mean, LT2_daily_testing)
+print(ETS_LT2_scores)
 
-STL_ETS_forecast <- ETS_fit$mean
-print(STL_ETS_forecast)
-
-# fit and forecast STL + ETS model to data
-ETS_fit_2 <-  stlf(SAL_daily_training, h = 365)
+# fit ETS model to SAL
+ETS_SAL <-  ets(SAL_daily_training, h = 365)
 
 # plot foresting results
-autoplot(ETS_fit_2) + 
+autoplot(ETS_SAL) + 
   ylab("depth to groundwater (meters)") + 
   theme_light()
 
 # plot model + observed data
 autoplot(ts_SAL_clean, series = "Original") +
-  autolayer(ETS_fit_2, series = "STL + ETS", PI = FALSE) +
+  autolayer(ETS_SAL, series = "ETS", PI = FALSE) +
   ylab("depth to groundwater (meters)") +
   theme_light()
 
