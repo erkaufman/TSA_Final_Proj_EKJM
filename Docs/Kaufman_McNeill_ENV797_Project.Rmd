@@ -254,7 +254,23 @@ auser_temp <- auser_raw %>%
 #create a start date object for temperature
 start_temp <- as.Date("1998-03-05")
 
-#note: 0 is essentially NA for the beginning rows, true zero is 0.0
+#fix this plot because it looks ugly
+ggplot(auser_temp, aes(x = Date))+
+         # geom_line(aes(y=Temperature_Orentano, color="orchid3"))+
+         # geom_line(aes(y=Temperature_Monte_Serra, color="lightblue"))+
+         # geom_line(aes(y=Temperature_Ponte_a_Moriano, color="slateblue"))+
+         geom_line(aes(y=Temperature_Lucca_Orto_Botanico, color="thistle"))+
+  theme_light()
+
+#create a time series object for the temperature
+ts_temp <- ts(auser_temp[,5],start=c(1998,03,05), frequency=365)
+
+autoplot(ts_temp) + theme_light()
+
+ts_temp_clean <- tsclean(ts_temp)
+
+autoplot(ts_temp_clean) + theme_light()
+
 ```
 
 ```{r}
@@ -267,6 +283,15 @@ auser_volume <- auser_raw %>%
 #create a start date object for volume
 start_volume <- as.Date("2005-01-01")
 start_volume_CSA_CSAL <- as.Date("2014-01-01")
+
+#create a time series object for volume
+ts_vol_SAL <- ts(auser_volume[,6],start=c(2005,01,01), frequency=365)
+ts_vol_LT2 <- ts(auser_volume[,2],start=c(2005,01,01), frequency=365) 
+#need to figure out which volume corresponds to which well
+
+autoplot(ts_vol_SAL)+
+  autolayer(ts_vol_LT2)+
+  theme_light()
 
 ```
 
@@ -303,16 +328,16 @@ Each figure should be accompanied by a caption, and referenced within the text i
 
 #plot the ACF and PACF for south well LT2
 plot_grid(
-  autoplot(Acf(ts_LT2_clean,lag.max=80,plot=FALSE), 
+  autoplot(Acf(ts_LT2_clean,lag.max=1825,plot=FALSE), 
            main = "TS LT2 Depth to Groundwater") + theme_light(),
-  autoplot(Pacf(ts_LT2_clean,lag.max=80,plot=FALSE), 
+  autoplot(Pacf(ts_LT2_clean,lag.max=1825,plot=FALSE), 
            main = "TS LT2 Depth to Groundwater") + theme_light())
 
 #plot the ACF and PACF for north well SAL
 plot_grid(
-  autoplot(Acf(ts_SAL_clean,lag.max=80,plot=FALSE), 
+  autoplot(Acf(ts_SAL_clean,lag.max=1825,plot=FALSE), 
            main = "TS SAL Depth to Groundwater") + theme_light(),
-  autoplot(Pacf(ts_SAL_clean,lag.max=80,plot=FALSE), 
+  autoplot(Pacf(ts_SAL_clean,lag.max=1825,plot=FALSE), 
            main = "TS SAL Depth to Groundwater") + theme_light())
 
 ```
@@ -337,8 +362,6 @@ plot(decompose_ts_SAL_mult)
 
 ```{r}
 
-#HONESTY ZONE EMMA I DONT REALLY UNDERSTAND THIS I COPIED IT FROM ASSIGNMENT 7 ANSWER KEY
-
 #create deseasoned time series objects
 ts_LT2_deseas <- seasadj(decompose_ts_LT2_add)
 
@@ -351,11 +374,7 @@ plot_grid(
 
 print(adf.test(ts_LT2_deseas))
 
-#ADF test shows a p-value of 0.95. We fail to reject the null hypothesis. The deseasoned series may have a stochastic trend.
-
-summary(MannKendall(ts_LT2_deseas))
-
-#Mann Kendall test p-value indicates we should reject the null hypothesis. Data has a deterministic trend.
+#ADF test shows a p-value of 0.95. We fail to reject the null hypothesis. The de-seasoned series has a stochastic trend.
 
 ts_SAL_deseas <- seasadj(decompose_ts_SAL_add)
 
@@ -368,8 +387,9 @@ plot_grid(
 
 print(adf.test(ts_SAL_deseas))
 
-#ADF test shows a p-value of 0.01. We reject the null hypothesis. The deseasoned series does not have a stochastic trend.
+#ADF test shows a p-value of 0.01. We reject the null hypothesis. The de-seasoned series does not have a stochastic trend.
 
+#run the Mann Kendall test on the deseasoned time series
 summary(MannKendall(ts_SAL_deseas))
 
 #Mann Kendall test p-value indicates we should reject the null hypothesis. Data has a deterministic trend.
@@ -385,43 +405,79 @@ autoplot(ts_LT2_deseas, series = "LT2")+
 
 ```
 
-```{r}
+```{r monthly average data wrangling}
 
-#auto arima with orginal LT2 series
-LT2_auto <- auto.arima(ts_LT2_clean)
-summary(LT2_auto)
+#wrangle the data to show monthly averages instead of daily data
+auser_monthly <- auser_raw %>%
+  select(Date:Depth_to_Groundwater_SAL, Temperature_Lucca_Orto_Botanico) %>%
+  rename(LT2 = Depth_to_Groundwater_LT2,
+         SAL = Depth_to_Groundwater_SAL) %>%
+  mutate(Month = floor_date(Date, "month")) %>%
+  group_by(Month) %>%
+  summarize_all(mean, na.rm = TRUE)
 
-#auto arima with orginal SAL series
-SAL_auto <- auto.arima(ts_SAL_clean)
-summary(SAL_auto)
+#create a dataframe for each well that starts at the unique first month of data
+LT2_depth_monthly <- auser_monthly %>%
+  select(Date, LT2)%>%
+  slice(95:268)
 
-#auto arima with deseasoned LT2 series
-LT2_deseas_auto <- auto.arima(ts_LT2_deseas,seasonal=FALSE)
-summary(LT2_deseas_auto)
+SAL_depth_monthly <- auser_monthly %>%
+  select(Date, SAL)%>%
+  slice(110:268)
 
-#auto arima with deseasoned SAL series
-SAL_deseas_auto <- auto.arima(ts_SAL_deseas,seasonal=FALSE)
-summary(SAL_deseas_auto)
+#create time series objects for monthly averages
+ts_LT2_monthly <- ts(LT2_depth_monthly[,2],start=c(2006,01,01), frequency=12)
+ts_SAL_monthly <- ts(SAL_depth_monthly[,2],start=c(2007,04,01), frequency=12)
+
+#clean time series objects for monthly averages
+ts_LT2_monthly_clean <- tsclean(ts_LT2_monthly)
+ts_SAL_monthly_clean <- tsclean(ts_SAL_monthly)
+
+#plot cleaned monthly average time series
+autoplot(ts_LT2_monthly_clean) +
+  autolayer(ts_SAL_monthly_clean) +
+  theme_light()
 
 ```
 
+```{r Auto Sarima}
+
+#auto sarima with monthly LT2 series
+LT2_auto <- auto.arima(ts_LT2_monthly_clean)
+summary(LT2_auto)
+
+#auto sarima with monthly SAL series
+SAL_auto <- auto.arima(ts_SAL_monthly_clean)
+summary(SAL_auto)
+
+```
 
 ```{r subset daily time series}
 
-# create a subset of the time series that excludes one month
+# create a subset of the time series that excludes one year
 n_for = 365
 LT2_daily_training <- subset(ts_LT2_clean, end = length(ts_LT2_clean) - n_for)
 
-# create a subset of the time series that only includes the last 365 days
+# create a subset of the time series that only includes the last year
 LT2_daily_testing <- subset(ts_LT2_clean, start = length(ts_LT2_clean) - n_for)
 
+# create a subset of the time series that excludes one year
+SAL_daily_training <- subset(ts_SAL_clean, end = length(ts_SAL_clean) - n_for)
+
+# create a subset of the time series that only includes the last year
+SAL_daily_testing <- subset(ts_SAL_clean, start = length(ts_SAL_clean) - n_for)
+
+#check plots
 autoplot(LT2_daily_training)
 autoplot(LT2_daily_testing)
+autoplot(SAL_daily_training)
+autoplot(SAL_daily_testing)
+
 ```
 
-```{r STL + ETS Model}
+```{r ETS Model}
 
-# fit and forecast STL + ETS model to data
+# fit and forecast ETS model to data
 ETS_fit <-  stlf(LT2_daily_training, h = 365)
 
 # plot foresting results
@@ -442,42 +498,25 @@ print(STL_ETS_scores)
 STL_ETS_forecast <- ETS_fit$mean
 print(STL_ETS_forecast)
 
-getwd()
-submission_template <- read.csv(file="./submission_template.csv", header=TRUE)
-submission_template$date <- as.Date(submission_template$date, format = "%m/%d/%y")
-submission_template$load <- STL_ETS_forecast
-write.table(submission_template, "submission.csv", sep = ",", row.names = FALSE, quote = FALSE)
-
-```
-
-```{r ARIMA and Fourier Model 1}
-
-ARIMA_Fourier_fit_1 <- auto.arima(ts_daily_training, 
-                             seasonal = FALSE, 
-                             lambda = 0,
-                             xreg = fourier(ts_daily_training, 
-                                            K=c(2,12)))
-
-ARIMA_Fourier_forecast_1 <- forecast(ARIMA_Fourier_fit_1,
-                                   xreg=fourier(ts_daily_training,
-                                                K = c(2,12), h = 31), h=31) 
+# fit and forecast STL + ETS model to data
+ETS_fit_2 <-  stlf(SAL_daily_training, h = 365)
 
 # plot foresting results
-autoplot(ARIMA_Fourier_forecast_1) + 
-  ylab("Daily Load") + 
+autoplot(ETS_fit_2) + 
+  ylab("depth to groundwater (meters)") + 
   theme_light()
 
 # plot model + observed data
-autoplot(ts_daily, series = "Original") +
-  autolayer(ARIMA_Fourier_forecast_1, series = "ARIMA FOURIER 1", PI = FALSE) +
-  ylab("Daily Load") +
+autoplot(ts_SAL_clean, series = "Original") +
+  autolayer(ETS_fit_2, series = "STL + ETS", PI = FALSE) +
+  ylab("depth to groundwater (meters)") +
   theme_light()
 
 # check the MAPE
-ARIMA_Fourier_scores_1 <- accuracy(ARIMA_Fourier_forecast_1$mean, ts_daily_testing)
-ARIMA_Fourier_scores_1
+STL_ETS_scores_2 <- accuracy(ETS_fit_2$mean, SAL_daily_testing)
+print(STL_ETS_scores_2)
 
-forecast_1 <- as.numeric(ARIMA_Fourier_forecast_1$mean)
-print(forecast_1)
+STL_ETS_forecast_2 <- ETS_fit_2$mean
+print(STL_ETS_forecast_2)
 
 ```
