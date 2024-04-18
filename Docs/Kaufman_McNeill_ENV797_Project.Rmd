@@ -8,7 +8,7 @@ editor_options:
 ---
 
 ```{r}
-
+# load required packages
 library(lubridate)
 library(ggplot2)
 library(forecast)  
@@ -20,14 +20,19 @@ library(smooth)
 library(dplyr)
 library(cowplot)
 library(corrplot)
-library(kableExtra)
-
+library(kableExtra) 
 ```
 
 #### Introduction, Motivation, Relevance, Objectives
 
+This project focuses on predicting water availability in an Italian aquifer managed by Area Group- a leading Italian utility operator. The group provides water services to 9 million inhabitants across Italy. 
+In order to best service their customers, the Acea group must understand how much water is available from the water bodies they are drawing from. Forecasting water availability in a water body is necessary to ensure daily consumption needs are met. 
 
-Write a few paragraphs detailing the rationale for your study. This should include both the context of the topic as well as a rationale for your choice of dataset (reason for location, variables, etc.). You may choose to include citations if you like or any other reference you may have used during the project (optional).
+The UN reported that groundwater provides “half of the volume of water withdrawn for domestic use by the global population,” and that water use is expected to grow 1% per year over the next thirty years (UN, 2022). Thus, it is important to explore how much groundwater will be available in the future. If groundwater levels are forecasted to drop dramatically, these forecasts can be used to urge for more efficient water use practices, and investments into groundwater recharge strategies. 
+
+We focused our study in Italy due to the comprehensive data we were able to access in the region. We hope to examine the best exogenous variables that can help accurately predict groundwater levels, and then these findings would allow us to know how to focus groundwater forecasting efforts in other regions across the globe. 
+
+(add more about objectives?)
 
 #### Dataset information
 
@@ -122,7 +127,8 @@ start_DIEC <- as.Date("2011-01-02")
 ```{r}
 
 #show the head of 10 rows that do not include NAs
-head_auser <- auser_raw[which(complete.cases(auser_raw))[1:10], ]
+head_auser <- as.data.frame(auser_raw[which(complete.cases(auser_raw))[1:10], ])
+kbl(head_auser) #NEED TO FIX COLUMN NAMES HERE
 
 #make character values for all of the variable names and corresponding units
 Variables <- c("Date", "Rainfall_Gallicano", "Rainfall_Pontetetto", "Rainfall_Monte_Serra", "Rainfall_Orentano", "Rainfall_Borgo_a_Mozzano", "Rainfall_Piaggione", "Rainfall_Calavorno", "Rainfall_Croce_Arcana", "Rainfall_Tereglio_Coreglia_Antelminelli", "Rainfall_Fabbriche_di_Vallico", "Depth_to_Groundwater_LT2", "Depth_to_Groundwater_SAL", "Depth_to_Groundwater_PAG", "Depth_to_Groundwater_CoS", "Depth_to_Groundwater_DIEC", "Temperature_Orentano", "Temperature_Monte_Serra", "Temperature_Ponte_a_Moriano", "Temperature_Lucca_Orto_Botanico", "Volume_POL", "Volume_CC1", "Volume_CC2", "Volume_CSA", "Volume_CSAL", "Hydrometry_Monte_S_Quirico", "Hydrometry_Piaggione")
@@ -215,7 +221,14 @@ na_indices_rain <- which(is.na(auser_rain), arr.ind = TRUE)
 print(na_indices_rain)
 
 #remove the monitoring sites that don't have continuous data, columns 4 and 7
-auser_rain_subset <- auser_rain[, !(names(auser_rain) %in% c("Rainfall_Monte_Serra", "Rainfall_Piaggione"))]
+auser_rain_subset <- auser_rain[, !(names(auser_rain) %in% c("Rainfall_Monte_Serra", "Rainfall_Piaggione"))] %>% 
+  mutate(Day = day(Date),
+         Month= month(Date),
+         Year= year(Date))
+
+auser_rain_subset_monthly <- auser_rain_subset %>% 
+  group_by(Year, Month) %>% #leave out day to calc monthly mean
+  summarise(across(starts_with("Rainfall_"), mean))#take the mean for the day
 
 auser_rain_long <- pivot_longer(auser_rain_subset, Rainfall_Gallicano:Rainfall_Fabbriche_di_Vallico, names_to = "Rainfall.location", values_to = "Rainfall.Depth")
 
@@ -223,10 +236,10 @@ auser_rain_long <- pivot_longer(auser_rain_subset, Rainfall_Gallicano:Rainfall_F
 ggplot(auser_rain_long, aes(x=Date,y=Rainfall.Depth, color=Rainfall.location))+ 
   geom_line()
 
-#ts for each rainfall gauging station
-list_rain_ts <- list()
+#daily ts for each rainfall gauging station
+list_rain_ts_daily <- list()
 
-#iterate over each monitoring site column
+#iterate over each monitoring site column for daily rainfall
 for (i in 2:9) {
   #extract the column name
   column_name <- names(auser_rain_subset)[i]
@@ -238,11 +251,27 @@ for (i in 2:9) {
   ts_name <- paste("ts_", column_name, sep = "")
   
   #assign the time series object to the list with the unique name
-  list_rain_ts[[ts_name]] <- ts_rain
+  list_rain_ts_daily[[ts_name]] <- ts_rain
 }
 
-#plotting some of the rainfall data
-autoplot(list_rain_ts$ts_Rainfall_Orentano)
+#monthly ts for each rainfall gauging station
+list_rain_ts_monthly <- list()
+
+#iterate over each monitoring site column for monthly rainfall
+for (i in 3:10) {
+  #extract the column name
+  column_name <- names(auser_rain_subset_monthly)[i]
+  
+  #create a time series object for the current monitoring site column
+  ts_rain <- ts(auser_rain_subset_monthly[, i], start = c(2006, 1, 1), frequency = 12)
+  
+  #assign a unique name to the time series object based on the column name
+  ts_name <- paste("ts_", column_name, sep = "")
+  
+  #assign the time series object to the list with the unique name
+  list_rain_ts_monthly[[ts_name]] <- ts_rain
+}
+
 
 ```
 
@@ -316,13 +345,7 @@ corrplot.mixed(auser_correlation, upper = "ellipse")
 
 ```
 
-#### Analysis (Methods and Models)
 
-Describe the analysis and tests that were performed. Described the components of the time series you identified. List any packages and functions used. Include visualizations of your dataset (i.e. time series plot, ACF, PACF, etc).
-
-Format your R chunks so that graphs are displayed but code is not displayed. Accompany these graphs with text sections that describe the visualizations and provide context for further analyses.
-
-Each figure should be accompanied by a caption, and referenced within the text if applicable.
 
 ```{r }
 
@@ -463,6 +486,39 @@ autoplot(SAL_monthly_testing)
 
 ```
 
+```{r subset daily time series}
+
+# create a subset of the time series that excludes one year
+n_for = 365
+LT2_daily_training <- subset(ts_LT2_clean, end = length(ts_LT2_clean) - n_for)
+
+# create a subset of the time series that only includes the last year
+LT2_daily_testing <- subset(ts_LT2_clean, start = length(ts_LT2_clean) - n_for)
+
+# create a subset of the time series that excludes one year
+SAL_daily_training <- subset(ts_SAL_clean, end = length(ts_SAL_clean) - n_for)
+
+# create a subset of the time series that only includes the last year
+SAL_daily_testing <- subset(ts_SAL_clean, start = length(ts_SAL_clean) - n_for)
+
+#check plots
+# autoplot(LT2_daily_training)
+# autoplot(LT2_daily_testing)
+# autoplot(SAL_daily_training)
+# autoplot(SAL_daily_testing)
+
+```
+
+#### Analysis (Methods and Models)
+
+Describe the analysis and tests that were performed. Described the components of the time series you identified. List any packages and functions used. Include visualizations of your dataset (i.e. time series plot, ACF, PACF, etc).
+
+Format your R chunks so that graphs are displayed but code is not displayed. Accompany these graphs with text sections that describe the visualizations and provide context for further analyses.
+
+Each figure should be accompanied by a caption, and referenced within the text if applicable.
+
+##### SARIMA 
+
 ```{r Auto Sarima}
 
 #fit auto sarima model to LT2
@@ -509,28 +565,7 @@ print(auto_SAL_scores)
 
 ```
 
-```{r subset daily time series}
-
-# create a subset of the time series that excludes one year
-n_for = 365
-LT2_daily_training <- subset(ts_LT2_clean, end = length(ts_LT2_clean) - n_for)
-
-# create a subset of the time series that only includes the last year
-LT2_daily_testing <- subset(ts_LT2_clean, start = length(ts_LT2_clean) - n_for)
-
-# create a subset of the time series that excludes one year
-SAL_daily_training <- subset(ts_SAL_clean, end = length(ts_SAL_clean) - n_for)
-
-# create a subset of the time series that only includes the last year
-SAL_daily_testing <- subset(ts_SAL_clean, start = length(ts_SAL_clean) - n_for)
-
-#check plots
-# autoplot(LT2_daily_training)
-# autoplot(LT2_daily_testing)
-# autoplot(SAL_daily_training)
-# autoplot(SAL_daily_testing)
-
-```
+##### ETS
 
 ```{r ETS Model}
 
@@ -574,15 +609,119 @@ print(ETS_SAL_scores)
 
 ```
 
+##### SSES
+
+```{r SSES Model LT2 and SAL}
+# fit SSESS model to LT2 with year of holdout
+SSES_LT2 <- es(ts_LT2_clean, model="ZZZ", h=n_for, holdout=TRUE)
+
+# plot model + observed data
+autoplot(ts_LT2_clean, series = "Original") +
+  autolayer(SSES_LT2$fitted, series = "SSES", PI = FALSE) +
+  ylab("depth to groundwater (meters)") +
+  labs(title="SSES LT2 ")+
+  theme_light()
+
+# plot forecast
+autoplot(ts_LT2_clean) +
+  autolayer(SSES_LT2$forecast, series="SSES") +
+  xlab("Year") + ylab("Depth to GW (m)") +
+  guides(colour=guide_legend(title="Forecast"))+
+  labs(title="LT2")+
+  theme_light()
+
+# check the MAPE
+SSES_LT2_scores <- accuracy(SSES_LT2$forecast, LT2_daily_testing)
+print(SSES_LT2_scores)
+
+# fit SSES model to SAL
+SSES_SAL <- es(ts_SAL_clean, model="ZZZ", h=n_for, holdout=TRUE)
+
+# plot model + observed data
+autoplot(ts_SAL_clean, series = "Original") +
+  autolayer(SSES_SAL$fitted, series = "SSES", PI = FALSE) +
+  ylab("depth to groundwater (meters)") +
+  labs(title="SSES SAL")+
+  theme_light()
+
+# plot forecast
+autoplot(ts_SAL_clean) +
+  autolayer(SSES_SAL$forecast, series="SSES") +
+  xlab("Year") + ylab("Depth to GW (m)") +
+  guides(colour=guide_legend(title="Forecast"))+
+  labs(title="SAL")+
+  theme_light()
+
+# check the MAPE
+SSES_SAL_scores <- accuracy(SSES_SAL$forecast, SAL_daily_testing)
+print(SSES_SAL_scores)
+```
+
+##### Neural Network
+
+```{r NN Model LT2 and SAL}
+# fit NN model to LT2 with year of holdout
+NN_LT2_fit <- nnetar(LT2_daily_training, p=1, P=1)
+
+# forecast for a year to compare to test dataset 
+NN_LT2_for <- forecast(NN_LT2_fit, h= 365)
+
+#Plot model + observed data
+autoplot(ts_LT2_clean) +
+  autolayer(NN_LT2_fit$fitted, series="Neural Network",PI=FALSE)+
+  ylab("depth to groundwater (meters)") +
+  labs(title="NN p=1, P=1, LT2")+
+  theme_light()
+
+#Plot foresting results
+autoplot(ts_LT2_clean) +
+  autolayer(NN_LT2_for, series="NN, p=1, P=1") +
+  xlab("Year") + ylab("Depth to GW (m)") +
+  guides(colour=guide_legend(title="Forecast"))+
+  labs(title="LT2")+
+  theme_light()
+
+# LT2 NN p=1, P=1 scores
+NN_scores_LT2 <- accuracy(NN_LT2_for$mean,LT2_daily_testing)
+print(NN_scores_LT2)
+
+# fit NN model to SAL with year of holdout
+NN_SAL_fit <- nnetar(SAL_daily_training, p=1, P=1)
+
+# forecast for a year to compare to test dataset 
+NN_SAL_for <- forecast(NN_SAL_fit, h= 365)
+
+#Plot model + observed data
+autoplot(ts_SAL_clean) +
+  autolayer(NN_SAL_fit$fitted, series="Neural Network",PI=FALSE)+
+  ylab("depth to groundwater (meters)") +
+  labs(title="NN p=1, P=1, SAL")+
+  theme_light()
+
+#Plot foresting results
+autoplot(ts_SAL_clean) +
+  autolayer(NN_SAL_for, series="NN, p=1, P=1") +
+  xlab("Year") + ylab("Depth to GW (m)") +
+  guides(colour=guide_legend(title="Forecast"))+
+  labs(title="SAL")+
+  theme_light()
+
+# SAL NN p=1, P=1 scores
+NN_scores_SAL <- accuracy(NN_SAL_for$mean, SAL_daily_testing)
+print(NN_scores_SAL)
+```
+
+##### Performance
+
 ```{r Comparing Performance Metrics}
 
 #create data frame for LT2 scores
-LT2_scores <- as.data.frame(rbind(auto_LT2_scores, ETS_LT2_scores, #EMMA, #EMMA))
-row.names(LT2_scores) <- c("SARIMA", "ETS", #"EMMA", #"EMMA")
+LT2_scores <- as.data.frame(rbind(auto_LT2_scores, ETS_LT2_scores, SSES_LT2_scores, NN_scores_LT2))
+row.names(LT2_scores) <- c("SARIMA", "ETS", "SSES", "NN")
 
 #create data frame for SAL scores
-SAL_scores <- as.data.frame(rbind(auto_SAL_scores, ETS_SAL_scores, #EMMA, #EMMA))
-row.names(SAL_scores) <- c("SARIMA", "ETS", #"EMMA", #"EMMA")
+SAL_scores <- as.data.frame(rbind(auto_SAL_scores, ETS_SAL_scores, SSES_SAL_scores, NN_scores_SAL))
+row.names(SAL_scores) <- c("SARIMA", "ETS", "SSES", "NN")
 
 #choose LT2 model with lowest RMSE #choose a different variable here if you want
 best_model_LT2 <- which.min(LT2_scores[,"RMSE"])
@@ -610,3 +749,86 @@ kbl(SAL_scores,
 
 ```
 
+```{r plot all results}
+#LT2 forecast comparison
+autoplot(ts_LT2_clean) +
+  autolayer(SSES_LT2$forecast, series="SSES") +
+  autolayer(ETS_LT2, series = "ETS", PI = FALSE) +
+  autolayer(auto_LT2_test, series = "SARIMA", PI = FALSE)+
+  autolayer(NN_LT2_for, series = "NN")+
+  xlab("Year") + ylab("Depth to GW (m)") +
+  guides(colour=guide_legend(title="Forecast"))+
+  theme_light()+
+  labs(title="Test data forecast comparison LT2")
+  
+#SAL forecast comparison
+autoplot(ts_SAL_clean) +
+  autolayer(SSES_SAL$forecast, series="SSES") +
+  autolayer(ETS_SAL, series = "ETS", PI = FALSE) +
+  autolayer(auto_SAL_test, series = "SARIMA", PI = FALSE)+
+  autolayer(NN_SAL_for, series = "NN")+
+  xlab("Year") + ylab("Depth to GW (m)") +
+  guides(colour=guide_legend(title="Forecast"))+
+  theme_light()+
+  labs(title="Test data forecast comparison SAL")
+
+```
+
+##### Improving Performance with Exogenous Variables
+
+```{r ETS with exogenous variables for SAL}
+#External regressors as test and train daily
+train_rain_daily <- list()
+test_rain_daily <- list()
+
+# Iterate over each time series object in the list
+for (i in names(list_rain_ts_daily)) {
+  # Extract the time series object
+  ts_obj <- list_rain_ts[[i]]
+  
+  # Create training set
+  train_ts <- subset(ts_obj, end = length(ts_obj) - 365)
+  
+  # Create test set
+  test_ts <- subset(ts_obj, start = length(ts_obj) - 365)
+  
+  # Assign the training and test sets to their respective lists
+  train_rain_daily[[i]] <- train_ts
+  test_rain_daily[[i]] <- test_ts
+}
+
+#External regressors as test and train monthly
+train_rain_monthly <- list()
+test_rain_monthly <- list()
+
+# Iterate over each time series object in the list
+for (i in names(list_rain_ts_monthly)) {
+  # Extract the time series object
+  ts_obj <- list_rain_ts_monthly[[i]]
+  
+  # Create training set
+  train_ts <- subset(ts_obj, end = length(ts_obj) - 12)
+  
+  # Create test set
+  test_ts <- subset(ts_obj, start = length(ts_obj) - 12)
+  
+  # Assign the training and test sets to their respective lists
+  train_rain_monthly[[i]] <- train_ts
+  test_rain_monthly[[i]] <- test_ts
+}
+
+#below doesn't work and i cant tell why...
+#ETS_SAL_reg <- ets(SAL_monthly_training, xreg=tail(train_rain_monthly[[1]], 147))
+
+#ETS_model_test <- ets(SAL_monthly_training,h= 12, xreg = tail(train_rain_monthly[1], 147))
+
+```
+
+#### Summary and Conclusions
+
+Summarize your major findings from your analyses in a few paragraphs and plots. What conclusions do you draw from your findings? Any insights on how to improve the model?
+
+#### Bibliography
+Un world water development report 2022 ‘Groundwater: Making the invisible visible.’ (n.d.). UN-Water. Retrieved April 18, 2024, from https://www.unwater.org/news/un-world-water-development-report-2022-%E2%80%98groundwater-making-invisible-visible%E2%80%99
+
+antimo musone, Aredhel Bergström, Federico, Luisa Marotta, Maggie, Maurizio Lucchesi. (2020). Acea Smart Water Analytics. Kaggle. https://kaggle.com/competitions/acea-water-prediction
