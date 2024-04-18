@@ -440,15 +440,72 @@ autoplot(ts_LT2_monthly_clean) +
 
 ```
 
+```{r subset monthly time series}
+
+# create a subset of the time series that excludes one year
+n_for_month = 12
+LT2_monthly_training <- subset(ts_LT2_monthly_clean, end = length(ts_LT2_monthly_clean) - n_for_month)
+
+# create a subset of the time series that only includes the last year
+LT2_monthly_testing <- subset(ts_LT2_monthly_clean, start = length(ts_LT2_monthly_clean) - n_for_month)
+
+# create a subset of the time series that excludes one year
+SAL_monthly_training <- subset(ts_SAL_monthly_clean, end = length(ts_SAL_monthly_clean) - n_for_month)
+
+# create a subset of the time series that only includes the last year
+SAL_monthly_testing <- subset(ts_SAL_monthly_clean, start = length(ts_SAL_monthly_clean) - n_for_month)
+
+#check plots
+autoplot(LT2_monthly_training)
+autoplot(LT2_monthly_testing)
+autoplot(SAL_monthly_training)
+autoplot(SAL_monthly_testing)
+
+```
+
 ```{r Auto Sarima}
 
-#auto sarima with monthly LT2 series
-LT2_auto <- auto.arima(ts_LT2_monthly_clean)
-summary(LT2_auto)
+#fit auto sarima model to LT2
+auto_LT2_train <- auto.arima(LT2_monthly_training)
+auto_LT2_test <- forecast(auto_LT2_train,h=12)
 
-#auto sarima with monthly SAL series
-SAL_auto <- auto.arima(ts_SAL_monthly_clean)
-summary(SAL_auto)
+#plot foresting results
+autoplot(auto_LT2_test)+ 
+  ylab("depth to groundwater (meters)") + 
+  ggtitle("Auto Sarima LT2") +
+  theme_light()
+
+#plot model + observed data
+autoplot(ts_LT2_monthly_clean, series = "Original") +
+  autolayer(auto_LT2_test, series = "Auto Sarima", PI = FALSE) +
+  ylab("depth to groundwater (meters)") +
+  ggtitle("Auto Sarima LT2") +
+  theme_light()
+
+#check the MAPE
+auto_LT2_scores <- accuracy(auto_LT2_test$mean, LT2_monthly_testing)
+print(auto_LT2_scores)
+
+#fit auto sarima model to SAL
+auto_SAL_train <- auto.arima(SAL_monthly_training)
+auto_SAL_test <- forecast(auto_SAL_train,h=12)
+
+#plot foresting results
+autoplot(auto_SAL_test)+ 
+  ylab("depth to groundwater (meters)") + 
+  ggtitle("Auto Sarima SAL") +
+  theme_light()
+
+#plot model + observed data
+autoplot(ts_SAL_monthly_clean, series = "Original") +
+  autolayer(auto_SAL_test, series = "Auto Sarima", PI = FALSE) +
+  ylab("depth to groundwater (meters)") +
+  ggtitle("Auto Sarima SAL") +
+  theme_light()
+
+#check the MAPE
+auto_SAL_scores <- accuracy(auto_SAL_test$mean, SAL_monthly_testing)
+print(auto_SAL_scores)
 
 ```
 
@@ -468,17 +525,17 @@ SAL_daily_training <- subset(ts_SAL_clean, end = length(ts_SAL_clean) - n_for)
 SAL_daily_testing <- subset(ts_SAL_clean, start = length(ts_SAL_clean) - n_for)
 
 #check plots
-autoplot(LT2_daily_training)
-autoplot(LT2_daily_testing)
-autoplot(SAL_daily_training)
-autoplot(SAL_daily_testing)
+# autoplot(LT2_daily_training)
+# autoplot(LT2_daily_testing)
+# autoplot(SAL_daily_training)
+# autoplot(SAL_daily_testing)
 
 ```
 
 ```{r ETS Model}
 
 # fit ETS model to LT2
-ETS_LT2 <-  ets(LT2_daily_training, h = 365)
+ETS_LT2 <-  stlf(LT2_daily_training, h = 365)
 
 # plot foresting results
 autoplot(ETS_LT2) + 
@@ -488,6 +545,7 @@ autoplot(ETS_LT2) +
 # plot model + observed data
 autoplot(ts_LT2_clean, series = "Original") +
   autolayer(ETS_LT2, series = "ETS", PI = FALSE) +
+  ggtitle("ETS LT2") +
   ylab("depth to groundwater (meters)") +
   theme_light()
 
@@ -496,7 +554,7 @@ ETS_LT2_scores <- accuracy(ETS_LT2$mean, LT2_daily_testing)
 print(ETS_LT2_scores)
 
 # fit ETS model to SAL
-ETS_SAL <-  ets(SAL_daily_training, h = 365)
+ETS_SAL <-  stlf(SAL_daily_training, h = 365)
 
 # plot foresting results
 autoplot(ETS_SAL) + 
@@ -506,14 +564,49 @@ autoplot(ETS_SAL) +
 # plot model + observed data
 autoplot(ts_SAL_clean, series = "Original") +
   autolayer(ETS_SAL, series = "ETS", PI = FALSE) +
+  ggtitle("ETS SAL") +
   ylab("depth to groundwater (meters)") +
   theme_light()
 
 # check the MAPE
-STL_ETS_scores_2 <- accuracy(ETS_fit_2$mean, SAL_daily_testing)
-print(STL_ETS_scores_2)
-
-STL_ETS_forecast_2 <- ETS_fit_2$mean
-print(STL_ETS_forecast_2)
+ETS_SAL_scores <- accuracy(ETS_SAL$mean, SAL_daily_testing)
+print(ETS_SAL_scores)
 
 ```
+
+```{r Comparing Performance Metrics}
+
+#create data frame for LT2 scores
+LT2_scores <- as.data.frame(rbind(auto_LT2_scores, ETS_LT2_scores, #EMMA, #EMMA))
+row.names(LT2_scores) <- c("SARIMA", "ETS", #"EMMA", #"EMMA")
+
+#create data frame for SAL scores
+SAL_scores <- as.data.frame(rbind(auto_SAL_scores, ETS_SAL_scores, #EMMA, #EMMA))
+row.names(SAL_scores) <- c("SARIMA", "ETS", #"EMMA", #"EMMA")
+
+#choose LT2 model with lowest RMSE #choose a different variable here if you want
+best_model_LT2 <- which.min(LT2_scores[,"RMSE"])
+cat("The best LT2 Well model by RMSE is:", row.names(LT2_scores[best_model_LT2,]))  
+
+#choose SAL model with lowest RMSE #choose a different variable here if you want
+best_model_SAL <- which.min(SAL_scores[,"RMSE"])
+cat("The best SAL Well model by RMSE is:", row.names(SAL_scores[best_model_SAL,]))  
+
+#kbl for LT2
+kbl(LT2_scores, 
+      caption = "Forecast Accuracy for Seasonal Data at Well LT2",
+      digits = array(5,ncol(LT2_scores))) %>%
+  kable_styling(full_width = FALSE, position = "center") %>%
+  #highlight model with lowest RMSE
+  kable_styling(latex_options="striped", stripe_index = which.min(LT2_scores[,"RMSE"]))
+
+#kbl for SAL
+kbl(SAL_scores, 
+      caption = "Forecast Accuracy for Seasonal Data at Well SAL",
+      digits = array(5,ncol(SAL_scores))) %>%
+  kable_styling(full_width = FALSE, position = "center") %>%
+  #highlight model with lowest RMSE
+  kable_styling(latex_options="striped", stripe_index = which.min(SAL_scores[,"RMSE"]))
+
+```
+
