@@ -385,61 +385,60 @@ summary(MannKendall(ts_SAL_deseas))
 
 ```
 
-
 ```{r subset daily time series}
-
-# create a subset of the time series that excludes one year
-n_for = 365
-LT2_daily_training <- subset(ts_LT2_clean, end = length(ts_LT2_clean) - n_for)
-
-# create a subset of the time series that only includes the last 365 days
-LT2_daily_testing <- subset(ts_LT2_clean, start = length(ts_LT2_clean) - n_for)
-
-autoplot(LT2_daily_training)
-autoplot(LT2_daily_testing)
-
-# create a subset of the time series that excludes one month
-n_for_month = 30
-LT2_daily_training2 <- subset(ts_LT2_clean, end = length(ts_LT2_clean) - n_for_month)
-
-# create a subset of the time series that only includes the last 365 days
-LT2_daily_testing2 <- subset(ts_LT2_clean, start = length(ts_LT2_clean) - n_for_month)
-
-autoplot(LT2_daily_training2)
-autoplot(LT2_daily_testing2)
+# 
+# # create a subset of the time series that excludes one year
+# n_for = 365
+# LT2_daily_training <- subset(ts_LT2_clean, end = length(ts_LT2_clean) - n_for)
+# 
+# # create a subset of the time series that only includes the last 365 days
+# LT2_daily_testing <- subset(ts_LT2_clean, start = length(ts_LT2_clean) - n_for)
+# 
+# autoplot(LT2_daily_training)
+# autoplot(LT2_daily_testing)
+# 
+# # create a subset of the time series that excludes one month
+# n_for_month = 30
+# LT2_daily_training2 <- subset(ts_LT2_clean, end = length(ts_LT2_clean) - n_for_month)
+# 
+# # create a subset of the time series that only includes the last 365 days
+# LT2_daily_testing2 <- subset(ts_LT2_clean, start = length(ts_LT2_clean) - n_for_month)
+# 
+# autoplot(LT2_daily_training2)
+# autoplot(LT2_daily_testing2)
 ```
 
 ```{r STL + ETS Model}
 
-# fit and forecast STL + ETS model to data
-ETS_fit2 <-  stlf(LT2_daily_training2, h = 30)
-ETS_fit <-  stlf(LT2_daily_training, h = 365)
-
-# plot foresting results
-autoplot(ETS_fit2) + 
-  ylab("depth to groundwater (meters)") + 
-  theme_light()
-
-# plot model + observed data
-autoplot(ts_LT2_clean, series = "Original") +
-  autolayer(ETS_fit2, series = "STL + ETS", PI = FALSE) +
-  ylab("depth to groundwater (meters)") +
-  theme_light()
-
-# check the MAPE
-STL_ETS_scores2 <- accuracy(ETS_fit2$mean, LT2_daily_testing2)
-print(STL_ETS_scores2)
-
-STL_ETS_forecast2 <- ETS_fit2$mean
-print(STL_ETS_forecast2)
-
-STL_ETS_scores <- accuracy(ETS_fit$mean, LT2_daily_testing)
-print(STL_ETS_scores)
-
-STL_ETS_forecast <- ETS_fit$mean
-print(STL_ETS_forecast)
-
-getwd()
+# # fit and forecast STL + ETS model to data
+# ETS_fit2 <-  stlf(LT2_daily_training2, h = 30)
+# ETS_fit <-  stlf(LT2_daily_training, h = 365)
+# 
+# # plot foresting results
+# autoplot(ETS_fit2) + 
+#   ylab("depth to groundwater (meters)") + 
+#   theme_light()
+# 
+# # plot model + observed data
+# autoplot(ts_LT2_clean, series = "Original") +
+#   autolayer(ETS_fit2, series = "STL + ETS", PI = FALSE) +
+#   ylab("depth to groundwater (meters)") +
+#   theme_light()
+# 
+# # check the MAPE
+# STL_ETS_scores2 <- accuracy(ETS_fit2$mean, LT2_daily_testing2)
+# print(STL_ETS_scores2)
+# 
+# STL_ETS_forecast2 <- ETS_fit2$mean
+# print(STL_ETS_forecast2)
+# 
+# STL_ETS_scores <- accuracy(ETS_fit$mean, LT2_daily_testing)
+# print(STL_ETS_scores)
+# 
+# STL_ETS_forecast <- ETS_fit$mean
+# print(STL_ETS_forecast)
+# 
+# getwd()
 # submission_template <- read.csv(file="./submission_template.csv", header=TRUE)
 # submission_template$date <- as.Date(submission_template$date, format = "%m/%d/%y")
 # submission_template$load <- STL_ETS_forecast
@@ -447,98 +446,190 @@ getwd()
 
 ```
 
-```{r}
-#fitting to all of the data
-SSES_seas_year <- es(ts_LT2_clean,model="ZZZ",h=n_for,holdout=TRUE)
-plot(SSES_seas_year)
-checkresiduals(SSES_seas_year)
-SSES_scores_year <- accuracy(SSES_seas_year$forecast,LT2_daily_testing) 
-seas_scores <- as.data.frame(rbind(SSES_scores_year))
-row.names(seas_scores) <- c("SSES")
 
-#plotting year forescast for stl + ets and sses
+```{r subset daily time series}
+
+# create a subset of the time series that excludes one year
+n_for = 365
+LT2_daily_training <- subset(ts_LT2_clean, end = length(ts_LT2_clean) - n_for)
+
+# create a subset of the time series that only includes the last year
+LT2_daily_testing <- subset(ts_LT2_clean, start = length(ts_LT2_clean) - n_for)
+
+# create a subset of the time series that excludes one year
+SAL_daily_training <- subset(ts_SAL_clean, end = length(ts_SAL_clean) - n_for)
+
+# create a subset of the time series that only includes the last year
+SAL_daily_testing <- subset(ts_SAL_clean, start = length(ts_SAL_clean) - n_for)
+
+#check plots
+autoplot(LT2_daily_training)
+autoplot(LT2_daily_testing)
+autoplot(SAL_daily_training)
+autoplot(SAL_daily_testing)
+
+```
+
+```{r SSES Model LT2 and SAL}
+# fit SSESS model to LT2 with year of holdout
+SSES_LT2 <- es(ts_LT2_clean, model="ZZZ", h=n_for, holdout=TRUE)
+
+# plot model + observed data
+autoplot(ts_LT2_clean, series = "Original") +
+  autolayer(SSES_LT2$fitted, series = "SSES", PI = FALSE) +
+  ylab("depth to groundwater (meters)") +
+  labs(title="SSES LT2 ")+
+  theme_light()
+
+# plot forecast
 autoplot(ts_LT2_clean) +
-  autolayer(SSES_seas_year$forecast, series="SSES") +
-  autolayer(ETS_fit, series = "STL + ETS", PI = FALSE) +
+  autolayer(SSES_LT2$forecast, series="SSES") +
   xlab("Year") + ylab("Depth to GW (m)") +
   guides(colour=guide_legend(title="Forecast"))+
-  theme_light()+
-  labs(title="Forecast")
+  labs(title="LT2")+
+  theme_light()
+
+# check the MAPE
+SSES_LT2_scores <- accuracy(SSES_LT2$forecast, LT2_daily_testing)
+print(SSES_LT2_scores)
+
+# fit SSES model to SAL
+SSES_SAL <- es(ts_SAL_clean, model="ZZZ", h=n_for, holdout=TRUE)
+
+# plot model + observed data
+autoplot(ts_SAL_clean, series = "Original") +
+  autolayer(SSES_SAL$fitted, series = "SSES", PI = FALSE) +
+  ylab("depth to groundwater (meters)") +
+  labs(title="SSES SAL")+
+  theme_light()
+
+# plot forecast
+autoplot(ts_SAL_clean) +
+  autolayer(SSES_SAL$forecast, series="SSES") +
+  xlab("Year") + ylab("Depth to GW (m)") +
+  guides(colour=guide_legend(title="Forecast"))+
+  labs(title="SAL")+
+  theme_light()
+
+# check the MAPE
+SSES_SAL_scores <- accuracy(SSES_SAL$forecast, SAL_daily_testing)
+print(SSES_SAL_scores)
+```
+
+```{r NN Model LT2 and SAL}
+# fit NN model to LT2 with year of holdout
+NN_LT2_fit <- nnetar(LT2_daily_training, p=1, P=1)
+
+# forecast for a year to compare to test dataset 
+NN_LT2_for <- forecast(NN_LT2_fit, h= 365)
+
+#Plot model + observed data
+autoplot(ts_LT2_clean) +
+  autolayer(NN_LT2_fit$fitted, series="Neural Network",PI=FALSE)+
+  ylab("depth to groundwater (meters)") +
+  labs(title="NN p=1, P=1, LT2")+
+  theme_light()
+
+#Plot foresting results
+autoplot(ts_LT2_clean) +
+  autolayer(NN_LT2_for, series="NN, p=1, P=1") +
+  xlab("Year") + ylab("Depth to GW (m)") +
+  guides(colour=guide_legend(title="Forecast"))+
+  labs(title="LT2")+
+  theme_light()
+
+# LT2 NN p=1, P=1 scores
+NN_scores_LT2 <- accuracy(NN_LT2_for$mean,LT2_daily_testing)
+print(NN_scores_LT2)
+
+# fit NN model to SAL with year of holdout
+NN_SAL_fit <- nnetar(SAL_daily_training, p=1, P=1)
+
+# forecast for a year to compare to test dataset 
+NN_SAL_for <- forecast(NN_SAL_fit, h= 365)
+
+#Plot model + observed data
+autoplot(ts_SAL_clean) +
+  autolayer(NN_SAL_fit$fitted, series="Neural Network",PI=FALSE)+
+  ylab("depth to groundwater (meters)") +
+  labs(title="NN p=1, P=1, SAL")+
+  theme_light()
+
+#Plot foresting results
+autoplot(ts_SAL_clean) +
+  autolayer(NN_SAL_for, series="NN, p=1, P=1") +
+  xlab("Year") + ylab("Depth to GW (m)") +
+  guides(colour=guide_legend(title="Forecast"))+
+  labs(title="SAL")+
+  theme_light()
+
+# SAL NN p=1, P=1 scores
+NN_scores_SAL <- accuracy(NN_SAL_for$mean, SAL_daily_testing)
+print(NN_scores_SAL)
+```
+
+```{r}
+# #fitting to all of the data
+# SSES_seas_year <- es(ts_LT2_clean,model="ZZZ",h=n_for,holdout=TRUE)
+# plot(SSES_seas_year)
+# checkresiduals(SSES_seas_year)
+# SSES_scores_year <- accuracy(SSES_seas_year$forecast,LT2_daily_testing) 
+# seas_scores <- as.data.frame(rbind(SSES_scores_year))
+# row.names(seas_scores) <- c("SSES")
+# 
+# #plotting year forescast for stl + ets and sses
+# autoplot(ts_LT2_clean) +
+#   autolayer(SSES_seas_year$forecast, series="SSES") +
+#   autolayer(ETS_fit, series = "STL + ETS", PI = FALSE) +
+#   xlab("Year") + ylab("Depth to GW (m)") +
+#   guides(colour=guide_legend(title="Forecast"))+
+#   theme_light()+
+#   labs(title="Forecast")
 
 ```
 
 
 ```{r SSES model}
-# Create a variable with number of steps ahead we will forecast
-# This is helpful whenever you need to change forecasting horizon you only need to change it here
-n_for_month <- 30 #play with this, change to 12, 23, 2 and check of the best model is still the same
-nobs_LT2 <- nrow(LT2_depth)
-first_m_LT2 <- month(start_LT2)
-first_y_LT2 <- year(start_LT2)
-
-ts_LT2_month <- subset(ts_LT2_clean, end = length(ts_LT2_clean) - n_for_month)
-last_obs <- subset(ts_LT2_clean, start = length(ts_LT2_clean) - n_for_month)
-
-#fitting to all of the data
-SSES_seas <- es(ts_LT2_month,model="ZZZ",h=n_for_month,holdout=TRUE)
-plot(SSES_seas)
-checkresiduals(SSES_seas)
-
-#check model accuracy
-SSES_scores <- accuracy(SSES_seas$forecast,last_obs) #why is this forecasting for a year? 
-
-# create a dataframe 
-seas_scores <- as.data.frame(rbind(SSES_scores))
-row.names(seas_scores) <- c("SSES")
-
-#could add more models to this, and more results in the above dataframe to compare MAPE values
-autoplot(ts_LT2_clean,xlim = c("2020-01-01", "2020-06-30")) +
-  autolayer(SSES_seas$forecast, series="SSES") +
-  autolayer(ETS_fit2, series = "STL + ETS", PI = FALSE) +
-  xlab("Year") + ylab("Depth to GW (m)") +
-  guides(colour=guide_legend(title="Forecast"))+
-  theme_light()
-  #
-  #xlim(as.Date("2020-01-01"), as.Date("2020-06-30"))
-
-#plotting fit to og
-autoplot(ts_LT2_clean, series="original", color='black')+
-  autolayer(SSES_seas$fitted, series='SSES') +
-  theme_light()+
-  labs(y='Depth to GW (m)', 
-       title='Model fit to original data',
-       x='Year')
-  
+# # Create a variable with number of steps ahead we will forecast
+# # This is helpful whenever you need to change forecasting horizon you only need to change it here
+# n_for_month <- 30 #play with this, change to 12, 23, 2 and check of the best model is still the same
+# nobs_LT2 <- nrow(LT2_depth)
+# first_m_LT2 <- month(start_LT2)
+# first_y_LT2 <- year(start_LT2)
+# 
+# ts_LT2_month <- subset(ts_LT2_clean, end = length(ts_LT2_clean) - n_for_month)
+# last_obs <- subset(ts_LT2_clean, start = length(ts_LT2_clean) - n_for_month)
+# 
+# #fitting to all of the data
+# SSES_seas <- es(ts_LT2_month,model="ZZZ",h=n_for_month,holdout=TRUE)
+# plot(SSES_seas)
+# checkresiduals(SSES_seas)
+# 
+# #check model accuracy
+# SSES_scores <- accuracy(SSES_seas$forecast,last_obs) #why is this forecasting for a year? 
+# 
+# # create a dataframe 
+# seas_scores <- as.data.frame(rbind(SSES_scores))
+# row.names(seas_scores) <- c("SSES")
+# 
+# #could add more models to this, and more results in the above dataframe to compare MAPE values
+# autoplot(ts_LT2_clean,xlim = c("2020-01-01", "2020-06-30")) +
+#   autolayer(SSES_seas$forecast, series="SSES") +
+#   autolayer(ETS_fit2, series = "STL + ETS", PI = FALSE) +
+#   xlab("Year") + ylab("Depth to GW (m)") +
+#   guides(colour=guide_legend(title="Forecast"))+
+#   theme_light()
+#   #
+#   #xlim(as.Date("2020-01-01"), as.Date("2020-06-30"))
+# 
+# #plotting fit to og
+# autoplot(ts_LT2_clean, series="original", color='black')+
+#   autolayer(SSES_seas$fitted, series='SSES') +
+#   theme_light()+
+#   labs(y='Depth to GW (m)', 
+#        title='Model fit to original data',
+#        x='Year')
+#   
 ```
 
-```{r ARIMA and Fourier Model 1}
-# 
-# ARIMA_Fourier_fit_1 <- auto.arima(ts_daily_training, 
-#                              seasonal = FALSE, 
-#                              lambda = 0,
-#                              xreg = fourier(ts_daily_training, 
-#                                             K=c(2,12)))
-# 
-# ARIMA_Fourier_forecast_1 <- forecast(ARIMA_Fourier_fit_1,
-#                                    xreg=fourier(ts_daily_training,
-#                                                 K = c(2,12), h = 31), h=31) 
-# 
-# # plot foresting results
-# autoplot(ARIMA_Fourier_forecast_1) + 
-#   ylab("Daily Load") + 
-#   theme_light()
-# 
-# # plot model + observed data
-# autoplot(ts_daily, series = "Original") +
-#   autolayer(ARIMA_Fourier_forecast_1, series = "ARIMA FOURIER 1", PI = FALSE) +
-#   ylab("Daily Load") +
-#   theme_light()
-# 
-# # check the MAPE
-# ARIMA_Fourier_scores_1 <- accuracy(ARIMA_Fourier_forecast_1$mean, ts_daily_testing)
-# ARIMA_Fourier_scores_1
-# 
-# forecast_1 <- as.numeric(ARIMA_Fourier_forecast_1$mean)
-# print(forecast_1)
 
-```
