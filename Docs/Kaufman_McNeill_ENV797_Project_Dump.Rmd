@@ -991,6 +991,7 @@ print(auto_SAL_temp_reg_scores)
 
 ```
 
+
 ```{r compare accuracy for all SARIMAs}
 
 #create data frame for LT2 SARIMA scores
@@ -1031,155 +1032,191 @@ kbl(SAL_sarima_scores,
 
 ```
 
-## THIS ISN'T WORKING <3
+###### Forecasting into the future FIX THIS
+
+```{r applying best models to the whole dataset and forecasting into the future}
+#forecast of sarima with temp for SAL a year into the future
+#LT2 auto sarima with rainfall regressor
+auto_SAL_temp_reg_all <- auto.arima(ts_SAL_monthly_reg, 
+                                    xreg=ts_temp_monthly_reg)
+auto_SAL_temp_reg_for <- forecast(auto_SAL_temp_reg_all, 
+                                  h=12,  
+                                  xreg=ts_temp_monthly_reg)
+
+#forecast of sarmia with temp for LT2 a year into the future
+auto_LT2_temp_reg_all <- auto.arima(ts_LT2_monthly_reg, 
+                                    xreg=ts_temp_monthly_reg)
+auto_LT2_temp_reg_for <- forecast(auto_LT2_temp_reg_all,
+                                  h=1,
+                                  xreg=ts_temp_monthly_reg)
+
+#plotting the forecasts
+autoplot(auto_LT2_temp_reg_for) + 
+  ylab("depth to groundwater (meters)") + 
+  theme_light()
+
+autoplot(auto_SAL_temp_reg_for) + 
+  ylab("depth to groundwater (meters)") + 
+  theme_light()
+
+#plot model + observed data
+autoplot(ts_LT2_monthly_reg, series = "Original") +
+  autolayer(auto_LT2_temp_reg_for, series = "Forecast", PI = FALSE) +
+  ylab("depth to groundwater (meters)") +
+  ggtitle("Auto Sarima LT2 Forecast") +
+  theme_light()
+
+
+```
+
 
 ```{r create exogenous variables for ETS jenn}
 
-#subset columns of interest
-daily_reg <- auser_raw %>%
-  select(Date:Temperature_Lucca_Orto_Botanico) %>%
-  rename(SAL = Depth_to_Groundwater_SAL) %>%
-  select(Date, SAL, Rainfall_Gallicano:Rainfall_Fabbriche_di_Vallico, Temperature_Lucca_Orto_Botanico) %>%
-  slice(3320:8154)
-
-#create a dataframe for each regressor that starts at the unique first month of data
-temp_reg_daily <- daily_reg %>%
-  select(Date, Temperature_Lucca_Orto_Botanico)
-
-rain_reg_daily <- daily_reg %>%
-  select(Date, Rainfall_Gallicano) #change out this variable to test diff rain regressor
-
-SAL_for_reg <- daily_reg %>%
-  select(Date, SAL)
-
-#create time series objects for monthly averages
-ts_SAL_daily_reg <- tsclean(ts(SAL_for_reg[,2],start=c(2007,04,06),frequency=365))
-ts_rain_daily_reg <- tsclean(ts(rain_reg_daily[,2],start=c(2007,04,06),frequency=365))
-ts_temp_daily_reg <- tsclean(ts(temp_reg_daily[,2],start=c(2007,04,06),frequency=365))
-
-#plot time series and regressors for visualization
-autoplot(ts_SAL_daily_reg) +
-  autolayer(ts_rain_daily_reg) +
-  autolayer(ts_temp_daily_reg) +
-  theme_light()
+# #subset columns of interest
+# daily_reg <- auser_raw %>%
+#   select(Date:Temperature_Lucca_Orto_Botanico) %>%
+#   rename(SAL = Depth_to_Groundwater_SAL) %>%
+#   select(Date, SAL, Rainfall_Gallicano:Rainfall_Fabbriche_di_Vallico, Temperature_Lucca_Orto_Botanico) %>%
+#   slice(3320:8154)
+# 
+# #create a dataframe for each regressor that starts at the unique first month of data
+# temp_reg_daily <- daily_reg %>%
+#   select(Date, Temperature_Lucca_Orto_Botanico)
+# 
+# rain_reg_daily <- daily_reg %>%
+#   select(Date, Rainfall_Gallicano) #change out this variable to test diff rain regressor
+# 
+# SAL_for_reg <- daily_reg %>%
+#   select(Date, SAL)
+# 
+# #create time series objects for monthly averages
+# ts_SAL_daily_reg <- tsclean(ts(SAL_for_reg[,2],start=c(2007,04,06),frequency=365))
+# ts_rain_daily_reg <- tsclean(ts(rain_reg_daily[,2],start=c(2007,04,06),frequency=365))
+# ts_temp_daily_reg <- tsclean(ts(temp_reg_daily[,2],start=c(2007,04,06),frequency=365))
+# 
+# #plot time series and regressors for visualization
+# autoplot(ts_SAL_daily_reg) +
+#   autolayer(ts_rain_daily_reg) +
+#   autolayer(ts_temp_daily_reg) +
+#   theme_light()
 ```
 
 ```{r ETS with exogenous variables for SAL jenn}
 
 #create training and testing sets with the exogenous variables
-n_for = 365
-
-SAL_daily_training_reg <- subset(ts_SAL_daily_reg, end = length(ts_SAL_daily_reg) - n_for)
-
-SAL_daily_testing_reg <- subset(ts_SAL_daily_reg, start = length(ts_SAL_daily_reg) - n_for)
-
-rain_daily_training_reg <- subset(ts_rain_daily_reg, end = length(ts_rain_daily_reg) - n_for)
-  
-rain_daily_testing_reg <- subset(ts_rain_daily_reg, start = length(ts_rain_daily_reg) - n_for)
-
-temp_daily_training_reg <- subset(ts_temp_daily_reg, end = length(ts_temp_daily_reg) - n_for)
-  
-temp_daily_testing_reg <- subset(ts_temp_daily_reg, start = length(ts_temp_daily_reg) - n_for)
-
-#SAL ETS with rainfall regressor
-# I DONT THINK THAT YOU CAN RUN AN ETF WITH AN EXTERNAL REGRESSOR PERIOD?
-# stlm_rain_df <- data.frame(SAL_daily_training_reg, rain_daily_training_reg)
+# n_for = 365
 # 
-# ets_SAL_rain_reg_train <- stlm(SAL_daily_training_reg ~ rain_daily_training_reg, data=stlm_rain_df)
+# SAL_daily_training_reg <- subset(ts_SAL_daily_reg, end = length(ts_SAL_daily_reg) - n_for)
 # 
-# ets_SAL_rain_reg_train <- stlm(SAL_daily_training_reg ~ rain_daily_training_reg)
-#   
-# stlf(SAL_daily_training_reg,xreg=rain_daily_training_reg)
-
-auto_LT2_rain_reg_test <- forecast(auto_LT2_rain_reg_train, h=12,  xreg=rain_monthly_testing_reg)
-
-#plot foresting results
-autoplot(auto_LT2_rain_reg_test)+ 
-  ylab("depth to groundwater (meters)") + 
-  ggtitle("Auto Sarima LT2 with Rainfall Regressor") +
-  theme_light()
-
-#plot model + observed data
-autoplot(ts_LT2_monthly_reg, series = "Original") +
-  autolayer(auto_LT2_rain_reg_test, series = "Auto Sarima W/ Reg", PI = FALSE) +
-  ylab("depth to groundwater (meters)") +
-  ggtitle("Auto Sarima LT2 with Rainfall Regressor") +
-  theme_light()
-
-#check the MAPE
-auto_LT2_rain_reg_scores <- accuracy(auto_LT2_rain_reg_test$mean, LT2_monthly_testing_reg)
-print(auto_LT2_rain_reg_scores)
-
-#LT2 auto sarima with temperature regressor
-auto_LT2_temp_reg_train <- auto.arima(LT2_monthly_training_reg, xreg=temp_monthly_training_reg)
-
-auto_LT2_temp_reg_test <- forecast(auto_LT2_temp_reg_train, h=12,  xreg=temp_monthly_testing_reg)
-
-#plot foresting results
-autoplot(auto_LT2_temp_reg_test)+ 
-  ylab("depth to groundwater (meters)") + 
-  ggtitle("Auto Sarima LT2 with Temperature Regressor") +
-  theme_light()
-
-#plot model + observed data
-autoplot(ts_LT2_monthly_reg, series = "Original") +
-  autolayer(auto_LT2_temp_reg_test, series = "Auto Sarima W/ Reg", PI = FALSE) +
-  ylab("depth to groundwater (meters)") +
-  ggtitle("Auto Sarima LT2 with Temperature Regressor") +
-  theme_light()
-
-#check the MAPE
-auto_LT2_temp_reg_scores <- accuracy(auto_LT2_temp_reg_test$mean, LT2_monthly_testing_reg)
-print(auto_LT2_temp_reg_scores)
+# SAL_daily_testing_reg <- subset(ts_SAL_daily_reg, start = length(ts_SAL_daily_reg) - n_for)
+# 
+# rain_daily_training_reg <- subset(ts_rain_daily_reg, end = length(ts_rain_daily_reg) - n_for)
+# 
+# rain_daily_testing_reg <- subset(ts_rain_daily_reg, start = length(ts_rain_daily_reg) - n_for)
+# 
+# temp_daily_training_reg <- subset(ts_temp_daily_reg, end = length(ts_temp_daily_reg) - n_for)
+# 
+# temp_daily_testing_reg <- subset(ts_temp_daily_reg, start = length(ts_temp_daily_reg) - n_for)
+# 
+# #SAL ETS with rainfall regressor
+# # I DONT THINK THAT YOU CAN RUN AN ETF WITH AN EXTERNAL REGRESSOR PERIOD?
+# # stlm_rain_df <- data.frame(SAL_daily_training_reg, rain_daily_training_reg)
+# #
+# # ets_SAL_rain_reg_train <- stlm(SAL_daily_training_reg ~ rain_daily_training_reg, data=stlm_rain_df)
+# #
+# # ets_SAL_rain_reg_train <- stlm(SAL_daily_training_reg ~ rain_daily_training_reg)
+# #
+# # stlf(SAL_daily_training_reg,xreg=rain_daily_training_reg)
+# 
+# auto_LT2_rain_reg_test <- forecast(auto_LT2_rain_reg_train, h=12,  xreg=rain_monthly_testing_reg)
+# 
+# #plot foresting results
+# autoplot(auto_LT2_rain_reg_test)+
+#   ylab("depth to groundwater (meters)") +
+#   ggtitle("Auto Sarima LT2 with Rainfall Regressor") +
+#   theme_light()
+# 
+# #plot model + observed data
+# autoplot(ts_LT2_monthly_reg, series = "Original") +
+#   autolayer(auto_LT2_rain_reg_test, series = "Auto Sarima W/ Reg", PI = FALSE) +
+#   ylab("depth to groundwater (meters)") +
+#   ggtitle("Auto Sarima LT2 with Rainfall Regressor") +
+#   theme_light()
+# 
+# #check the MAPE
+# auto_LT2_rain_reg_scores <- accuracy(auto_LT2_rain_reg_test$mean, LT2_monthly_testing_reg)
+# print(auto_LT2_rain_reg_scores)
+# 
+# #LT2 auto sarima with temperature regressor
+# auto_LT2_temp_reg_train <- auto.arima(LT2_monthly_training_reg, xreg=temp_monthly_training_reg)
+# 
+# auto_LT2_temp_reg_test <- forecast(auto_LT2_temp_reg_train, h=12,  xreg=temp_monthly_testing_reg)
+# 
+# #plot foresting results
+# autoplot(auto_LT2_temp_reg_test)+
+#   ylab("depth to groundwater (meters)") +
+#   ggtitle("Auto Sarima LT2 with Temperature Regressor") +
+#   theme_light()
+# 
+# #plot model + observed data
+# autoplot(ts_LT2_monthly_reg, series = "Original") +
+#   autolayer(auto_LT2_temp_reg_test, series = "Auto Sarima W/ Reg", PI = FALSE) +
+#   ylab("depth to groundwater (meters)") +
+#   ggtitle("Auto Sarima LT2 with Temperature Regressor") +
+#   theme_light()
+# 
+# #check the MAPE
+# auto_LT2_temp_reg_scores <- accuracy(auto_LT2_temp_reg_test$mean, LT2_monthly_testing_reg)
+# print(auto_LT2_temp_reg_scores)
 
 ```
 
 
 ```{r ETS with exogenous variables for SAL emma}
-#External regressors as test and train daily
-train_rain_daily <- list()
-test_rain_daily <- list()
-
-# Iterate over each time series object in the list
-for (i in names(list_rain_ts_daily)) {
-  # Extract the time series object
-  ts_obj <- list_rain_ts[[i]]
-  
-  # Create training set
-  train_ts <- subset(ts_obj, end = length(ts_obj) - 365)
-  
-  # Create test set
-  test_ts <- subset(ts_obj, start = length(ts_obj) - 365)
-  
-  # Assign the training and test sets to their respective lists
-  train_rain_daily[[i]] <- train_ts
-  test_rain_daily[[i]] <- test_ts
-}
-
-#External regressors as test and train monthly
-train_rain_monthly <- list()
-test_rain_monthly <- list()
-
-# Iterate over each time series object in the list
-for (i in names(list_rain_ts_monthly)) {
-  # Extract the time series object
-  ts_obj <- list_rain_ts_monthly[[i]]
-  
-  # Create training set
-  train_ts <- subset(ts_obj, end = length(ts_obj) - 12)
-  
-  # Create test set
-  test_ts <- subset(ts_obj, start = length(ts_obj) - 12)
-  
-  # Assign the training and test sets to their respective lists
-  train_rain_monthly[[i]] <- train_ts
-  test_rain_monthly[[i]] <- test_ts
-}
-
-#below doesn't work and i cant tell why...
-#ETS_SAL_reg <- ets(SAL_monthly_training, xreg=tail(train_rain_monthly[[1]], 147))
-
-#ETS_model_test <- ets(SAL_monthly_training,h= 12, xreg = tail(train_rain_monthly[1], 147))
+# #External regressors as test and train daily
+# train_rain_daily <- list()
+# test_rain_daily <- list()
+# 
+# # Iterate over each time series object in the list
+# for (i in names(list_rain_ts_daily)) {
+#   # Extract the time series object
+#   ts_obj <- list_rain_ts[[i]]
+#   
+#   # Create training set
+#   train_ts <- subset(ts_obj, end = length(ts_obj) - 365)
+#   
+#   # Create test set
+#   test_ts <- subset(ts_obj, start = length(ts_obj) - 365)
+#   
+#   # Assign the training and test sets to their respective lists
+#   train_rain_daily[[i]] <- train_ts
+#   test_rain_daily[[i]] <- test_ts
+# }
+# 
+# #External regressors as test and train monthly
+# train_rain_monthly <- list()
+# test_rain_monthly <- list()
+# 
+# # Iterate over each time series object in the list
+# for (i in names(list_rain_ts_monthly)) {
+#   # Extract the time series object
+#   ts_obj <- list_rain_ts_monthly[[i]]
+#   
+#   # Create training set
+#   train_ts <- subset(ts_obj, end = length(ts_obj) - 12)
+#   
+#   # Create test set
+#   test_ts <- subset(ts_obj, start = length(ts_obj) - 12)
+#   
+#   # Assign the training and test sets to their respective lists
+#   train_rain_monthly[[i]] <- train_ts
+#   test_rain_monthly[[i]] <- test_ts
+# }
+# 
+# #below doesn't work and i cant tell why...
+# #ETS_SAL_reg <- ets(SAL_monthly_training, xreg=tail(train_rain_monthly[[1]], 147))
+# 
+# #ETS_model_test <- ets(SAL_monthly_training,h= 12, xreg = tail(train_rain_monthly[1], 147))
 
 ```
 
