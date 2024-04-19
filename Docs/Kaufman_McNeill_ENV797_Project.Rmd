@@ -750,6 +750,7 @@ kbl(SAL_scores,
 ```
 
 ```{r plot all results}
+
 #LT2 forecast comparison
 autoplot(ts_LT2_clean) +
   autolayer(SSES_LT2$forecast, series="SSES") +
@@ -762,7 +763,41 @@ autoplot(ts_LT2_clean) +
   labs(title="Test data forecast comparison LT2")
   
 #SAL forecast comparison
-autoplot(ts_SAL_clean) +
+autoplot(ts_SAL_clean_end) +
+  autolayer(SSES_SAL$forecast, series="SSES") +
+  autolayer(ETS_SAL, series = "ETS", PI = FALSE) +
+  autolayer(auto_SAL_test, series = "SARIMA", PI = FALSE)+
+  autolayer(NN_SAL_for, series = "NN")+
+  xlab("Year") + ylab("Depth to GW (m)") +
+  guides(colour=guide_legend(title="Forecast"))+
+  theme_light()+
+  labs(title="Test data forecast comparison SAL")
+
+#make time series objects for the last two years of data
+LT2_depth_end <- LT2_depth %>%
+  slice(4749:5295)
+
+SAL_depth_end <- SAL_depth %>%
+  slice(4289:4835)
+
+ts_LT2_end <- ts(LT2_depth_end[,2], start=c(2019,01,01), frequency=365)
+ts_LT2_end_clean <- tsclean(ts_LT2_end)
+ts_SAL_end <- ts(SAL_depth_end[,2], start=c(2019,01,01), frequency=365)
+ts_SAL_end_clean <- tsclean(ts_SAL_end)
+
+#LT2 forecast comparison
+autoplot(ts_LT2_end_clean) +
+  autolayer(SSES_LT2$forecast, series="SSES") +
+  autolayer(ETS_LT2, series = "ETS", PI = FALSE) +
+  autolayer(auto_LT2_test, series = "SARIMA", PI = FALSE)+
+  autolayer(NN_LT2_for, series = "NN")+
+  xlab("Year") + ylab("Depth to GW (m)") +
+  guides(colour=guide_legend(title="Forecast"))+
+  theme_light()+
+  labs(title="Test data forecast comparison LT2")
+  
+#SAL forecast comparison
+autoplot(ts_SAL_end_clean) +
   autolayer(SSES_SAL$forecast, series="SSES") +
   autolayer(ETS_SAL, series = "ETS", PI = FALSE) +
   autolayer(auto_SAL_test, series = "SARIMA", PI = FALSE)+
