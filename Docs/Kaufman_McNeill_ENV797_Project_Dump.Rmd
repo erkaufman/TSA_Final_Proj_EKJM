@@ -1031,7 +1031,6 @@ kbl(SAL_sarima_scores,
 
 ```
 
-
 ## THIS ISN'T WORKING <3
 
 ```{r create exogenous variables for ETS jenn}
