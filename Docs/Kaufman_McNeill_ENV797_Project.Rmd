@@ -859,6 +859,106 @@ for (i in names(list_rain_ts_monthly)) {
 
 ```
 
+```{r create monthly exogenous variables for Sarima}
+
+#subset columns of interest
+monthly_reg <- auser_raw %>%
+  select(Date:Temperature_Lucca_Orto_Botanico) %>%
+  rename(LT2 = Depth_to_Groundwater_LT2) %>%
+  mutate(Month = floor_date(Date, "month")) %>%
+  group_by(Month) %>%
+  summarize_all(mean, na.rm = TRUE) %>%
+  select(Month, SAL, Temperature_Lucca_Orto_Botanico, Rainfall_Gallicano) %>%
+  slice(110:268)
+
+#create a dataframe for each regressor that starts at the unique first month of data
+temp_reg_monthly <- monthly_reg %>%
+  select(Month, Temperature_Lucca_Orto_Botanico)
+
+rain_reg_monthly <- monthly_reg %>%
+  select(Month, Rainfall_Gallicano)
+
+SAL_for_reg <- monthly_reg %>%
+  select(Month, SAL)
+
+#create time series objects for monthly averages
+ts_LT2_monthly_reg <- tsclean(ts(LT2_for_reg[,2],start=c(2007,04,01),frequency=12))
+ts_rain_monthly_reg <- tsclean(ts(rain_reg_monthly[,2],start=c(2007,04,01),frequency=12))
+ts_temp_monthly_reg <- tsclean(ts(temp_reg_monthly[,2],start=c(2007,04,01),frequency=12))
+
+#plot time series and regressors for visualization
+autoplot(ts_LT2_monthly_reg) +
+  autolayer(ts_rain_monthly_reg) +
+  autolayer(ts_temp_monthly_reg) +
+  theme_light()
+
+```
+
+
+```{r Sarima with exogenous variables for LT2}
+
+#create training and testing sets with the exogenous variables
+n_for_month = 12
+
+LT2_monthly_training_reg <- subset(ts_LT2_monthly_reg, end = length(ts_LT2_monthly_reg) - n_for_month)
+
+LT2_monthly_testing_reg <- subset(ts_LT2_monthly_reg, start = length(ts_LT2_monthly_reg) - n_for_month)
+
+rain_monthly_training_reg <- subset(ts_rain_monthly_reg, end = length(ts_rain_monthly_reg) - n_for_month)
+  
+rain_monthly_testing_reg <- subset(ts_rain_monthly_reg, start = length(ts_rain_monthly_reg) - n_for_month)
+
+temp_monthly_training_reg <- subset(ts_temp_monthly_reg, end = length(ts_temp_monthly_reg) - n_for_month)
+  
+temp_monthly_testing_reg <- subset(ts_temp_monthly_reg, start = length(ts_temp_monthly_reg) - n_for_month)
+
+#LT2 auto sarima with rainfall regressor
+auto_LT2_rain_reg_train <- auto.arima(LT2_monthly_training_reg, xreg=rain_monthly_training_reg)
+
+auto_LT2_rain_reg_test <- forecast(auto_LT2_rain_reg_train, h=12,  xreg=rain_monthly_testing_reg)
+
+#plot foresting results
+autoplot(auto_LT2_rain_reg_test)+ 
+  ylab("depth to groundwater (meters)") + 
+  ggtitle("Auto Sarima LT2 with Rainfall Regressor") +
+  theme_light()
+
+#plot model + observed data
+autoplot(ts_LT2_monthly_reg, series = "Original") +
+  autolayer(auto_LT2_rain_reg_test, series = "Auto Sarima W/ Reg", PI = FALSE) +
+  ylab("depth to groundwater (meters)") +
+  ggtitle("Auto Sarima LT2 with Rainfall Regressor") +
+  theme_light()
+
+#check the MAPE
+auto_LT2_rain_reg_scores <- accuracy(auto_LT2_rain_reg_test$mean, LT2_monthly_testing_reg)
+print(auto_LT2_rain_reg_scores)
+
+#LT2 auto sarima with temperature regressor
+auto_LT2_temp_reg_train <- auto.arima(LT2_monthly_training_reg, xreg=temp_monthly_training_reg)
+
+auto_LT2_temp_reg_test <- forecast(auto_LT2_temp_reg_train, h=12,  xreg=temp_monthly_testing_reg)
+
+#plot foresting results
+autoplot(auto_LT2_temp_reg_test)+ 
+  ylab("depth to groundwater (meters)") + 
+  ggtitle("Auto Sarima LT2 with Temperature Regressor") +
+  theme_light()
+
+#plot model + observed data
+autoplot(ts_LT2_monthly_reg, series = "Original") +
+  autolayer(auto_LT2_temp_reg_test, series = "Auto Sarima W/ Reg", PI = FALSE) +
+  ylab("depth to groundwater (meters)") +
+  ggtitle("Auto Sarima LT2 with Temperature Regressor") +
+  theme_light()
+
+#check the MAPE
+auto_LT2_temp_reg_scores <- accuracy(auto_LT2_temp_reg_test$mean, LT2_monthly_testing_reg)
+print(auto_LT2_temp_reg_scores)
+
+```
+
+
 #### Summary and Conclusions
 
 Summarize your major findings from your analyses in a few paragraphs and plots. What conclusions do you draw from your findings? Any insights on how to improve the model?
