@@ -218,7 +218,6 @@ autoplot(ts_LT2_clean, series = "LT2")+
 ```
 
 
-
 #### Analysis (Methods and Models)
 
 Describe the analysis and tests that were performed. Described the components of the time series you identified. List any packages and functions used. Include visualizations of your dataset (i.e. time series plot, ACF, PACF, etc).
