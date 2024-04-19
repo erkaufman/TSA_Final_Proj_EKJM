@@ -25,13 +25,13 @@ library(kableExtra)
 
 #### Introduction, Motivation, Relevance, Objectives
 
-This project focuses on predicting water availability in an Italian aquifer managed by Acea Group, a leading Italian utility operator. The group provides water services to 9 million inhabitants across Italy. 
+This project focuses on predicting water availability in an Italian aquifer managed by Acea Group, a leading Italian utility operator. The group provides water services to 9 million inhabitants across Italy.
 
-In order to best service their customers, the Acea group must understand how much water is available in the water bodies from which they extract. Forecasting water availability in a water body is necessary to ensure daily consumption needs are met. 
+In order to best service their customers, the Acea group must understand how much water is available in the water bodies from which they extract. Forecasting water availability in a water body is necessary to ensure daily consumption needs are met.
 
-The UN reported that groundwater provides “half of the volume of water withdrawn for domestic use by the global population” and that water use is expected to grow 1% per year over the next thirty years (UN, 2022). Thus, it is important to explore how much groundwater will be available in the future. If groundwater levels are forecasted to drop dramatically, these forecasts can be used to urge for more efficient water use practices and investments into groundwater recharge strategies. 
+The UN reported that groundwater provides “half of the volume of water withdrawn for domestic use by the global population” and that water use is expected to grow 1% per year over the next thirty years (UN, 2022). Thus, it is important to explore how much groundwater will be available in the future. If groundwater levels are forecasted to drop dramatically, these forecasts can be used to urge for more efficient water use practices and investments into groundwater recharge strategies.
 
-We focused our study in Italy due to the comprehensive data we were able to access in the region. In the following report, we examine the best exogenous variables that can help accurately predict groundwater levels. We hope that these findings offer insight about how to focus groundwater forecasting efforts in other regions across the globe. 
+We focused our study in Italy due to the comprehensive data we were able to access in the region. In the following report, we examine the best exogenous variables that can help accurately predict groundwater levels. We hope that these findings offer insight about how to focus groundwater forecasting efforts in other regions across the globe.
 
 (add more about objectives?)
 
@@ -45,7 +45,7 @@ The dataset for this analysis was collected from the [Acea Group Smart Water Ana
 
 The dataset for the Auser Aquifer includes daily depth to groundwater measurements (in meters) from five different wells across the north and south sectors. Wells SAL, PAG, CoS, and DIEC represent the northern unconfined portion while Well LT2 represents the southern confined portion. We also have daily temperature data at four sites, daily rainfall data at ten sites, and daily volume data from five different water treatment facilities.
 
-```{r import data, include=FALSE}
+```{r import data, echo=FALSE, fig.cap="Figure 1. Raw Depth to Groundwater Series"}
 
 getwd()
 
@@ -125,7 +125,7 @@ start_DIEC <- as.Date("2011-01-02")
 
 ```
 
-```{r}
+```{r data head and data variables kable, echo=FALSE}
 
 #show the head of 10 rows that do not include NAs
 head_auser <- as.data.frame(auser_raw[which(complete.cases(auser_raw))[1:10], ])
@@ -154,7 +154,7 @@ kbl(data_information, caption="Acea Group Auser Aquifer Data Structure") %>%
 
 The first obstacle with wrangling our data came when we realized that the data for each variable started at a different date. We found this issue by plotting the five depth to groundwater lines and seeing a large lag before the data started, NA values within each series, and a few random "zero" values that we assumed to be errors. To rectify this issue, we converted all "zero" values to NA, found the start date for each well's data, and then converted each well's data into a time series object. When we plotted these five time series together, we still had gaps of NA data. We ran the tsclean() function to fill in the gaps of missing data with interpolated values and then had five clean series with no data gaps.
 
-```{r}
+```{r create ts objects for each well, include=FALSE}
 
 #create a time series object of the values for depth to groundwater for each well
 #start the time series at the same unique first day of data as above
@@ -177,6 +177,10 @@ autoplot(ts_LT2, series = "LT2")+
   scale_y_continuous(name = "Depth to Groundwater (m)", 
                      breaks = seq(from=-16, to=0, by=2))
 
+```
+
+```{r clean time series, echo=FALSE, fig.cap="Figure 1. Depth to Groundwater Time Series"}
+
 #run the clean function on each time series to replace NAs
 ts_LT2_clean <- tsclean(ts_LT2)
 ts_SAL_clean <- tsclean(ts_SAL)
@@ -197,6 +201,10 @@ autoplot(ts_LT2_clean, series = "LT2")+
   scale_y_continuous(name = "Depth to Groundwater (m)", 
                      breaks = seq(from=-16, to=0, by=2))
 
+```
+
+```{r , echo=FALSE, fig.cap="Figure 2. LT2 and SAL Time Series"}
+
 #plot only the wells of interest
 autoplot(ts_LT2_clean, series = "LT2")+
   autolayer(ts_SAL_clean, series = "SAL")+
@@ -209,128 +217,7 @@ autoplot(ts_LT2_clean, series = "LT2")+
 
 ```
 
-We followed the same process for the other variables (rainfall, temperature, and volume) so that we had clean time series objects that could be used as exogenous variables later on in the modeling and forecasting portion of our process.
 
-[For rainfall data we looked at the monitoring sites that had continuous data]
-
-**NOTE: making these cleaned time series here for exogenous variables wasn't actually necessary. we had to remake these later when we modeled with exogenous variables because we had to make it so that all the time series started at the same time.
-
-```{r}
-# #create a dataframe with date and rainfall data
-# auser_rain <- auser_raw %>% 
-#   slice(2860:8154) %>% 
-#   select(Date:Rainfall_Fabbriche_di_Vallico)
-# 
-# #create a start date object for rainfall
-# start_rain <- as.Date("2006-01-01")
-# 
-# #find and print the row and column indices of NA values
-# na_indices_rain <- which(is.na(auser_rain), arr.ind = TRUE)
-# print(na_indices_rain)
-# 
-# #remove the monitoring sites that don't have continuous data, columns 4 and 7
-# auser_rain_subset <- auser_rain[, !(names(auser_rain) %in% c("Rainfall_Monte_Serra", "Rainfall_Piaggione"))] %>% 
-#   mutate(Day = day(Date),
-#          Month= month(Date),
-#          Year= year(Date))
-# 
-# auser_rain_subset_monthly <- auser_rain_subset %>% 
-#   group_by(Year, Month) %>% #leave out day to calc monthly mean
-#   summarise(across(starts_with("Rainfall_"), mean))#take the mean for the day
-# 
-# auser_rain_long <- pivot_longer(auser_rain_subset, Rainfall_Gallicano:Rainfall_Fabbriche_di_Vallico, names_to = "Rainfall.location", values_to = "Rainfall.Depth")
-# 
-# #plotting rainfall, need to fill in na and then make TS
-# ggplot(auser_rain_long, aes(x=Date,y=Rainfall.Depth, color=Rainfall.location))+ 
-#   geom_line()
-# 
-# #daily ts for each rainfall gauging station
-# list_rain_ts_daily <- list()
-# 
-# #iterate over each monitoring site column for daily rainfall
-# for (i in 2:9) {
-#   #extract the column name
-#   column_name <- names(auser_rain_subset)[i]
-#   
-#   #create a time series object for the current monitoring site column
-#   ts_rain <- ts(auser_rain_subset[, i], start = c(2006, 1, 1), frequency = 365)
-#   
-#   #assign a unique name to the time series object based on the column name
-#   ts_name <- paste("ts_", column_name, sep = "")
-#   
-#   #assign the time series object to the list with the unique name
-#   list_rain_ts_daily[[ts_name]] <- ts_rain
-# }
-# 
-# #monthly ts for each rainfall gauging station
-# list_rain_ts_monthly <- list()
-# 
-# #iterate over each monitoring site column for monthly rainfall
-# for (i in 3:10) {
-#   #extract the column name
-#   column_name <- names(auser_rain_subset_monthly)[i]
-#   
-#   #create a time series object for the current monitoring site column
-#   ts_rain <- ts(auser_rain_subset_monthly[, i], start = c(2006, 1, 1), frequency = 12)
-#   
-#   #assign a unique name to the time series object based on the column name
-#   ts_name <- paste("ts_", column_name, sep = "")
-#   
-#   #assign the time series object to the list with the unique name
-#   list_rain_ts_monthly[[ts_name]] <- ts_rain
-# }
-
-
-```
-
-```{r}
-# #create a dataframe with date and temperature data
-# auser_temp <- auser_raw %>% 
-#   select(Date,Temperature_Orentano:Temperature_Lucca_Orto_Botanico)
-# 
-# #create a start date object for temperature
-# start_temp <- as.Date("1998-03-05")
-# 
-# #fix this plot because it looks ugly
-# ggplot(auser_temp, aes(x = Date))+
-#          # geom_line(aes(y=Temperature_Orentano, color="orchid3"))+
-#          # geom_line(aes(y=Temperature_Monte_Serra, color="lightblue"))+
-#          # geom_line(aes(y=Temperature_Ponte_a_Moriano, color="slateblue"))+
-#          geom_line(aes(y=Temperature_Lucca_Orto_Botanico, color="thistle"))+
-#   theme_light()
-# 
-# #create a time series object for the temperature
-# ts_temp <- ts(auser_temp[,5],start=c(1998,03,05), frequency=365)
-# 
-# autoplot(ts_temp) + theme_light()
-# 
-# ts_temp_clean <- tsclean(ts_temp)
-# 
-# autoplot(ts_temp_clean) + theme_light()
-
-```
-
-```{r}
-#create a dataframe with date and volume data
-# auser_volume <- auser_raw %>% 
-#   slice(2495:8154) %>% 
-#   select(Date,Volume_POL:Volume_CSAL)  %>%
-#   mutate_at(vars(Volume_POL:Volume_CSAL), ~ ifelse(. == 0, NA, .))
-# 
-# #create a start date object for volume
-# start_volume <- as.Date("2005-01-01")
-# start_volume_CSA_CSAL <- as.Date("2014-01-01")
-# 
-# #create a time series object for volume
-# ts_vol_SAL <- ts(auser_volume[,6],start=c(2005,01,01), frequency=365)
-# ts_vol_LT2 <- ts(auser_volume[,2],start=c(2005,01,01), frequency=365) 
-# #need to figure out which volume corresponds to which well
-# 
-# autoplot(ts_vol_SAL)+
-#   autolayer(ts_vol_LT2)+
-#   theme_light()
-
-```
 
 #### Analysis (Methods and Models)
 
@@ -381,7 +268,7 @@ plot_grid(
 
 ```
 
-In order to visualize our data in another way, we decomposed the time series for each well into its seasonal, trend, and random components using the decompose() function with both the additive and multiplicative methods. **WRITE SOMETHING ABOUT CHOOSING WHICH METHOD IS BETTER MOVING FORWARD? OR MAYBE JUST REMOVE WHICHEVER ONE WE DECIDE TO NOT USE?
+In order to visualize our data in another way, we decomposed the time series for each well into its seasonal, trend, and random components using the decompose() function with both the additive and multiplicative methods. \*\*WRITE SOMETHING ABOUT CHOOSING WHICH METHOD IS BETTER MOVING FORWARD? OR MAYBE JUST REMOVE WHICHEVER ONE WE DECIDE TO NOT USE?
 
 ```{r}
 
@@ -401,7 +288,19 @@ plot(decompose_ts_SAL_mult)
 
 ```
 
-According to the decomposition, both of our wells showed depth to groundwater values that trended upwards over time. To model our data, we felt it was important to understand whether the trends were monotonic or stochastic. To arrive at an answer, we deseasoned the time series and then ran tests on them to classify their trends. The LT2 well in the confined portion of the aquifer turned out to have a stochastic trend, while the SAL well in the unconfined aquifer turned out to have a deterministic trend. 
+According to the decomposition, both of our wells showed depth to groundwater values that trended upwards over time. To model our data, we felt it was important to understand whether the trends were monotonic or stochastic. To arrive at an answer, we deseasoned the time series and then ran tests on them to classify their trends. The LT2 well in the confined portion of the aquifer turned out to have a stochastic trend, while the SAL well in the unconfined aquifer turned out to have a deterministic trend.
+
+|            | SAL North Well       | LT2 South Well      |
+|------------|----------------------|---------------------|
+| ADF Test   | p-value = 0.01       | p-value = 0.9466    |
+| Result     | Reject Null          | Fail to Reject Null |
+| MK Test    | p-value =\< 2.22e-16 | NA                  |
+| Result     | Reject Null          | NA                  |
+| Conclusion | Deterministic Trend  | Stochastic Trend    |
+
+: Trend Conclusions from the Augmented Dickey Fuller and Mann Kendall Test Results
+
+------------------------------------------------------------------------
 
 ```{r}
 
@@ -445,8 +344,6 @@ autoplot(ts_LT2_deseas, series = "LT2")+
   scale_x_continuous(name = "Year", breaks = seq(from=2006, to=2022, by=2))+
   scale_y_continuous(name = "Depth to Groundwater (m)", 
                      breaks = seq(from=-16, to=0, by=2))
-
-#ADD A KBL HERE WITH THE TREND RESULTS LIKE THE TABLE WE MADE IN THE SLIDES
 
 ```
 
@@ -531,9 +428,9 @@ SAL_daily_testing <- subset(ts_SAL_clean, start = length(ts_SAL_clean) - n_for)
 
 ```
 
-Once we analyzed the time series, we were ready to start fitting models. Our process for fitting models was to fit four models on each well by holding out a year of data. The following section shows the results of testing the four models against the actual time series values for the final year. 
+Once we analyzed the time series, we were ready to start fitting models. Our process for fitting models was to fit four models on each well by holding out a year of data. The following section shows the results of testing the four models against the actual time series values for the final year.
 
-##### SARIMA 
+##### SARIMA
 
 ```{r Auto Sarima}
 
@@ -727,8 +624,7 @@ NN_scores_SAL <- accuracy(NN_SAL_for$mean, SAL_daily_testing)
 print(NN_scores_SAL)
 ```
 
-**NOTE PLEASE CHECK THE NAMES OF THESE MODELS TO SEE IF THEYRE RIGHT??
-After running the Auto Sarima (SARIMA), the Exponential Smoothing State Space Model (ETS), the Simple Exponential Smoothing (SSES), and the Neural Network (NN) models, we plotted all tested models together on a graph and compared the predicted values for each model to the original data using the accuracy() function. 
+\*\*NOTE PLEASE CHECK THE NAMES OF THESE MODELS TO SEE IF THEYRE RIGHT?? After running the Auto Sarima (SARIMA), the Exponential Smoothing State Space Model (ETS), the Simple Exponential Smoothing (SSES), and the Neural Network (NN) models, we plotted all tested models together on a graph and compared the predicted values for each model to the original data using the accuracy() function.
 
 ##### Performance
 
@@ -1031,165 +927,48 @@ kbl(SAL_sarima_scores,
 
 ```
 
+```{r SARIMA comparison plots}
 
-## THIS ISN'T WORKING <3
+#make time series objects for the last two years of data
+LT2_depth_end <- LT2_depth %>%
+  slice(4749:5295)
 
-```{r create exogenous variables for ETS jenn}
+SAL_depth_end <- SAL_depth %>%
+  slice(4289:4835)
 
-#subset columns of interest
-daily_reg <- auser_raw %>%
-  select(Date:Temperature_Lucca_Orto_Botanico) %>%
-  rename(SAL = Depth_to_Groundwater_SAL) %>%
-  select(Date, SAL, Rainfall_Gallicano:Rainfall_Fabbriche_di_Vallico, Temperature_Lucca_Orto_Botanico) %>%
-  slice(3320:8154)
+ts_LT2_end <- ts(LT2_depth_end[,2], start=c(2019,01,01), frequency=365)
+ts_LT2_end_clean <- tsclean(ts_LT2_end)
+ts_SAL_end <- ts(SAL_depth_end[,2], start=c(2019,01,01), frequency=365)
+ts_SAL_end_clean <- tsclean(ts_SAL_end)
 
-#create a dataframe for each regressor that starts at the unique first month of data
-temp_reg_daily <- daily_reg %>%
-  select(Date, Temperature_Lucca_Orto_Botanico)
-
-rain_reg_daily <- daily_reg %>%
-  select(Date, Rainfall_Gallicano) #change out this variable to test diff rain regressor
-
-SAL_for_reg <- daily_reg %>%
-  select(Date, SAL)
-
-#create time series objects for monthly averages
-ts_SAL_daily_reg <- tsclean(ts(SAL_for_reg[,2],start=c(2007,04,06),frequency=365))
-ts_rain_daily_reg <- tsclean(ts(rain_reg_daily[,2],start=c(2007,04,06),frequency=365))
-ts_temp_daily_reg <- tsclean(ts(temp_reg_daily[,2],start=c(2007,04,06),frequency=365))
-
-#plot time series and regressors for visualization
-autoplot(ts_SAL_daily_reg) +
-  autolayer(ts_rain_daily_reg) +
-  autolayer(ts_temp_daily_reg) +
-  theme_light()
-```
-
-```{r ETS with exogenous variables for SAL jenn}
-
-#create training and testing sets with the exogenous variables
-n_for = 365
-
-SAL_daily_training_reg <- subset(ts_SAL_daily_reg, end = length(ts_SAL_daily_reg) - n_for)
-
-SAL_daily_testing_reg <- subset(ts_SAL_daily_reg, start = length(ts_SAL_daily_reg) - n_for)
-
-rain_daily_training_reg <- subset(ts_rain_daily_reg, end = length(ts_rain_daily_reg) - n_for)
+#LT2 forecast comparison
+autoplot(ts_LT2_end_clean) +
+  autolayer(auto_LT2_test, series = "original", PI = FALSE)+
+  autolayer(auto_LT2_rain_reg_test, series = "rain regressor", PI = FALSE)+
+  autolayer(auto_LT2_temp_reg_test, series = "temp regressor", PI = FALSE)+
+  xlab("Year") + ylab("Depth to GW (m)") +
+  guides(colour=guide_legend(title="Forecast"))+
+  theme_light()+
+  labs(title="SARIMA Model Comparisons for LT2")
   
-rain_daily_testing_reg <- subset(ts_rain_daily_reg, start = length(ts_rain_daily_reg) - n_for)
-
-temp_daily_training_reg <- subset(ts_temp_daily_reg, end = length(ts_temp_daily_reg) - n_for)
-  
-temp_daily_testing_reg <- subset(ts_temp_daily_reg, start = length(ts_temp_daily_reg) - n_for)
-
-#SAL ETS with rainfall regressor
-# I DONT THINK THAT YOU CAN RUN AN ETF WITH AN EXTERNAL REGRESSOR PERIOD?
-# stlm_rain_df <- data.frame(SAL_daily_training_reg, rain_daily_training_reg)
-# 
-# ets_SAL_rain_reg_train <- stlm(SAL_daily_training_reg ~ rain_daily_training_reg, data=stlm_rain_df)
-# 
-# ets_SAL_rain_reg_train <- stlm(SAL_daily_training_reg ~ rain_daily_training_reg)
-#   
-# stlf(SAL_daily_training_reg,xreg=rain_daily_training_reg)
-
-auto_LT2_rain_reg_test <- forecast(auto_LT2_rain_reg_train, h=12,  xreg=rain_monthly_testing_reg)
-
-#plot foresting results
-autoplot(auto_LT2_rain_reg_test)+ 
-  ylab("depth to groundwater (meters)") + 
-  ggtitle("Auto Sarima LT2 with Rainfall Regressor") +
-  theme_light()
-
-#plot model + observed data
-autoplot(ts_LT2_monthly_reg, series = "Original") +
-  autolayer(auto_LT2_rain_reg_test, series = "Auto Sarima W/ Reg", PI = FALSE) +
-  ylab("depth to groundwater (meters)") +
-  ggtitle("Auto Sarima LT2 with Rainfall Regressor") +
-  theme_light()
-
-#check the MAPE
-auto_LT2_rain_reg_scores <- accuracy(auto_LT2_rain_reg_test$mean, LT2_monthly_testing_reg)
-print(auto_LT2_rain_reg_scores)
-
-#LT2 auto sarima with temperature regressor
-auto_LT2_temp_reg_train <- auto.arima(LT2_monthly_training_reg, xreg=temp_monthly_training_reg)
-
-auto_LT2_temp_reg_test <- forecast(auto_LT2_temp_reg_train, h=12,  xreg=temp_monthly_testing_reg)
-
-#plot foresting results
-autoplot(auto_LT2_temp_reg_test)+ 
-  ylab("depth to groundwater (meters)") + 
-  ggtitle("Auto Sarima LT2 with Temperature Regressor") +
-  theme_light()
-
-#plot model + observed data
-autoplot(ts_LT2_monthly_reg, series = "Original") +
-  autolayer(auto_LT2_temp_reg_test, series = "Auto Sarima W/ Reg", PI = FALSE) +
-  ylab("depth to groundwater (meters)") +
-  ggtitle("Auto Sarima LT2 with Temperature Regressor") +
-  theme_light()
-
-#check the MAPE
-auto_LT2_temp_reg_scores <- accuracy(auto_LT2_temp_reg_test$mean, LT2_monthly_testing_reg)
-print(auto_LT2_temp_reg_scores)
+#SAL forecast comparison
+autoplot(ts_SAL_end_clean) +
+  autolayer(auto_SAL_test, series = "original", PI = FALSE)+
+  autolayer(auto_SAL_rain_reg_test, series = "rain regressor", PI = FALSE)+
+  autolayer(auto_SAL_temp_reg_test, series = "temp regressor", PI = FALSE)+
+  xlab("Year") + ylab("Depth to GW (m)") +
+  guides(colour=guide_legend(title="Forecast"))+
+  theme_light()+
+  labs(title="SARIMA Model Comparisons for LT2")
 
 ```
-
-
-```{r ETS with exogenous variables for SAL emma}
-#External regressors as test and train daily
-train_rain_daily <- list()
-test_rain_daily <- list()
-
-# Iterate over each time series object in the list
-for (i in names(list_rain_ts_daily)) {
-  # Extract the time series object
-  ts_obj <- list_rain_ts[[i]]
-  
-  # Create training set
-  train_ts <- subset(ts_obj, end = length(ts_obj) - 365)
-  
-  # Create test set
-  test_ts <- subset(ts_obj, start = length(ts_obj) - 365)
-  
-  # Assign the training and test sets to their respective lists
-  train_rain_daily[[i]] <- train_ts
-  test_rain_daily[[i]] <- test_ts
-}
-
-#External regressors as test and train monthly
-train_rain_monthly <- list()
-test_rain_monthly <- list()
-
-# Iterate over each time series object in the list
-for (i in names(list_rain_ts_monthly)) {
-  # Extract the time series object
-  ts_obj <- list_rain_ts_monthly[[i]]
-  
-  # Create training set
-  train_ts <- subset(ts_obj, end = length(ts_obj) - 12)
-  
-  # Create test set
-  test_ts <- subset(ts_obj, start = length(ts_obj) - 12)
-  
-  # Assign the training and test sets to their respective lists
-  train_rain_monthly[[i]] <- train_ts
-  test_rain_monthly[[i]] <- test_ts
-}
-
-#below doesn't work and i cant tell why...
-#ETS_SAL_reg <- ets(SAL_monthly_training, xreg=tail(train_rain_monthly[[1]], 147))
-
-#ETS_model_test <- ets(SAL_monthly_training,h= 12, xreg = tail(train_rain_monthly[1], 147))
-
-```
-
 
 #### Summary and Conclusions
 
 Summarize your major findings from your analyses in a few paragraphs and plots. What conclusions do you draw from your findings? Any insights on how to improve the model?
 
 #### Bibliography
-Un world water development report 2022 ‘Groundwater: Making the invisible visible.’ (n.d.). UN-Water. Retrieved April 18, 2024, from https://www.unwater.org/news/un-world-water-development-report-2022-%E2%80%98groundwater-making-invisible-visible%E2%80%99
 
-antimo musone, Aredhel Bergström, Federico, Luisa Marotta, Maggie, Maurizio Lucchesi. (2020). Acea Smart Water Analytics. Kaggle. https://kaggle.com/competitions/acea-water-prediction
+Un world water development report 2022 ‘Groundwater: Making the invisible visible.’ (n.d.). UN-Water. Retrieved April 18, 2024, from <https://www.unwater.org/news/un-world-water-development-report-2022-%E2%80%98groundwater-making-invisible-visible%E2%80%99>
+
+antimo musone, Aredhel Bergström, Federico, Luisa Marotta, Maggie, Maurizio Lucchesi. (2020). Acea Smart Water Analytics. Kaggle. <https://kaggle.com/competitions/acea-water-prediction>
