@@ -859,6 +859,7 @@ temp_daily_training_reg <- subset(ts_temp_daily_reg, end = length(ts_temp_daily_
   
 temp_daily_testing_reg <- subset(ts_temp_daily_reg, start = length(ts_temp_daily_reg) - n_for)
 
+##PICK UP HERE
 #LT2 ETS with rainfall regressor
 auto_LT2_rain_reg_train <- auto.arima(LT2_monthly_training_reg, xreg=rain_monthly_training_reg)
 
