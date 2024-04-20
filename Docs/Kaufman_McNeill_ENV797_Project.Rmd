@@ -47,7 +47,7 @@ The dataset for this analysis was collected from the [Acea Group Smart Water Ana
 
 The dataset for the Auser Aquifer includes daily depth to groundwater measurements (in meters) from five different wells across the north and south sectors. Wells SAL, PAG, CoS, and DIEC represent the northern unconfined portion while Well LT2 represents the southern confined portion. We also have daily temperature data at four sites, daily rainfall data at ten sites, and daily volume data from five different water treatment facilities.
 
-```{r import data, echo=FALSE, fig.cap="Figure 1. Raw Depth to Groundwater Series"}
+```{r import data, warning=FALSE, echo=FALSE, fig.cap="Raw Depth to Groundwater Series"}
 
 getwd()
 
@@ -127,7 +127,7 @@ start_DIEC <- as.Date("2011-01-02")
 
 ```
 
-```{r data head and data variables kable, echo=FALSE}
+```{r data head and data variables kable, warning=FALSE, echo=FALSE}
 
 #show the head of 10 rows that do not include NAs
 head_auser <- as.data.frame(auser_raw[which(complete.cases(auser_raw))[1:10], ])
@@ -156,7 +156,7 @@ kbl(data_information, caption="Acea Group Auser Aquifer Data Structure") %>%
 
 The first obstacle with wrangling our data came when we realized that the data for each variable started at a different date. We found this issue by plotting the five depth to groundwater lines and seeing a large lag before the data started, NA values within each series, and a few random "zero" values that we assumed to be errors. To rectify this issue, we converted all "zero" values to NA, found the start date for each well's data, and then converted each well's data into a time series object. When we plotted these five time series together, we still had gaps of NA data. We ran the tsclean() function to fill in the gaps of missing data with interpolated values and then had five clean series with no data gaps.
 
-```{r create ts objects for each well, include=FALSE}
+```{r create ts objects for each well, warning=FALSE, include=FALSE}
 
 #create a time series object of the values for depth to groundwater for each well
 #start the time series at the same unique first day of data as above
@@ -181,7 +181,7 @@ autoplot(ts_LT2, series = "LT2")+
 
 ```
 
-```{r clean time series, echo=FALSE, fig.cap="Figure 1. Depth to Groundwater Time Series"}
+```{r clean time series, echo=FALSE, warning=FALSE, fig.cap="Depth to Groundwater Time Series"}
 
 #run the clean function on each time series to replace NAs
 ts_LT2_clean <- tsclean(ts_LT2)
@@ -205,7 +205,7 @@ autoplot(ts_LT2_clean, series = "LT2")+
 
 ```
 
-```{r , echo=FALSE, fig.cap="Figure 2. LT2 and SAL Time Series"}
+```{r , echo=FALSE, warning=FALSE, fig.cap="LT2 and SAL Time Series"}
 
 #plot only the wells of interest
 autoplot(ts_LT2_clean, series = "LT2")+
@@ -230,7 +230,7 @@ Each figure should be accompanied by a caption, and referenced within the text i
 
 The first step of analysis that we performed was running the correlation function on our depth to groundwater data to discern whether the depth to groundwater values at the five wells were correlated to one another. We found that the four north wells had similar correlation values to one another and that the one south well was weakly correlated to the others. Because there were not strong correlations between the wells, we decided to focus the rest of our analysis on one north, confined well (SAL) and one south, unconfined well (LT2). These two wells had the most complete time series data.
 
-```{r correlation plots, echo=FALSE, fig.cap="Figure 3. Depth to Groundwater Correlation"}
+```{r correlation plots, echo=FALSE, warning=FALSE, fig.cap="Depth to Groundwater Correlation"}
 
 #looking at initial correlation of groundwater wells
 auser_subset <- auser_raw %>%
@@ -251,7 +251,7 @@ corrplot.mixed(auser_correlation, upper = "ellipse")
 
 We plotted the ACF and PACF for each well using a lag time of five years to get a sense for whether our data had seasonal patterns. Both ACF graphs show peaks and troughs at regular intervals, so we know that our data has yearly seasonality. Knowing what we know about temperature and rainfall affecting aquifer storage, it makes sense that the depth to groundwater in the aquifer is changing with respect to the season.
 
-```{r ACF and PACF for LT2, echo=FALSE, fig.cap="Figure 4. ACF and PACF for Depth to Groundwater at Well LT2"}
+```{r ACF and PACF for LT2, echo=FALSE, warning=FALSE, fig.cap="ACF and PACF for Depth to Groundwater at Well LT2"}
 
 #plot the ACF and PACF for south well LT2
 plot_grid(
@@ -262,7 +262,7 @@ plot_grid(
 
 ```
 
-```{r ACF and PACF for SAL, echo=FALSE, fig.cap="Figure 5. ACF and PACF for Depth to Groundwater at Well SAL"}
+```{r ACF and PACF for SAL, echo=FALSE, warning=FALSE, fig.cap="ACF and PACF for Depth to Groundwater at Well SAL"}
 
 #plot the ACF and PACF for north well SAL
 plot_grid(
@@ -276,7 +276,7 @@ plot_grid(
 
 In order to visualize our data in another way, we decomposed the time series for each well into its seasonal, trend, and random components using the decompose() function with both the additive and multiplicative methods. **WRITE SOMETHING ABOUT CHOOSING WHICH METHOD IS BETTER MOVING FORWARD? OR MAYBE JUST REMOVE WHICHEVER ONE WE DECIDE TO NOT USE?
 
-```{r decomposition LT2, echo=FALSE, fig.cap="Figure 6. Decomposition of Depth to Groundwater at Well LT2"}
+```{r decomposition LT2, echo=FALSE, warning=FALSE, fig.cap="Decomposition of Depth to Groundwater at Well LT2"}
 
 #decompose the time series for south well LT2 using additive and multiplicative methods
 decompose_ts_LT2_add <- decompose(ts_LT2_clean,"additive")
@@ -287,7 +287,7 @@ plot(decompose_ts_LT2_add)
 
 ```
 
-```{r decomposition SAL, echo=FALSE, fig.cap="Figure 7. Decomposition of Depth to Groundwater at Well SAL"}
+```{r decomposition SAL, echo=FALSE, warning=FALSE, fig.cap="Decomposition of Depth to Groundwater at Well SAL"}
 
 #decompose the time series for north well SAL using additive and multiplicative methods
 decompose_ts_SAL_add <- decompose(ts_SAL_clean,"additive")
@@ -311,7 +311,7 @@ According to the decomposition, both of our wells showed depth to groundwater va
 
 ------------------------------------------------------------------------
 
-```{r trend tests for LT2 and SAL, include=FALSE}
+```{r trend tests for LT2 and SAL, warning=FALSE, include=FALSE}
 
 #create deseasoned time series objects
 ts_LT2_deseas <- seasadj(decompose_ts_LT2_add)
@@ -345,7 +345,7 @@ summary(MannKendall(ts_SAL_deseas))
 
 ```
 
-```{r deseasoned time series plot to show trend, echo=FALSE, fig.cap="Figure 8. Trend Visualization for Deseasoned Time Series of Depth to Groundwater at Wells LT2 and SAL"}
+```{r deseasoned time series plot to show trend, echo=FALSE, warning=FALSE, fig.cap="Trend Visualization for Deseasoned Time Series of Depth to Groundwater at Wells LT2 and SAL"}
 
 #Mann Kendall test p-value indicates we should reject the null hypothesis. Data has a deterministic trend.
 
@@ -361,7 +361,7 @@ autoplot(ts_LT2_deseas, series = "LT2")+
 ```
 
 
-```{r monthly average data wrangling, include=FALSE}
+```{r monthly average data wrangling, warning=FALSE, include=FALSE}
 
 #wrangle the data to show monthly averages instead of daily data
 auser_monthly <- auser_raw %>%
@@ -396,7 +396,7 @@ autoplot(ts_LT2_monthly_clean) +
 
 ```
 
-```{r subset monthly time series, include=FALSE}
+```{r subset monthly time series, warning=FALSE, include=FALSE}
 
 # create a subset of the time series that excludes one year
 n_for_month = 12
@@ -419,7 +419,7 @@ autoplot(SAL_monthly_testing)
 
 ```
 
-```{r subset daily time series, include=FALSE}
+```{r subset daily time series, warning=FALSE, include=FALSE}
 
 # create a subset of the time series that excludes one year
 n_for = 365
@@ -446,7 +446,7 @@ Once we analyzed the time series, we were ready to start fitting models. Our pro
 
 ##### SARIMA
 
-```{r Auto Sarima, include=FALSE}
+```{r Auto Sarima, warning=FALSE, include=FALSE}
 
 #fit auto sarima model to LT2
 auto_LT2_train <- auto.arima(LT2_monthly_training)
@@ -494,7 +494,7 @@ print(auto_SAL_scores)
 
 ##### ETS
 
-```{r ETS Model, include=FALSE}
+```{r ETS Model, warning=FALSE, include=FALSE}
 
 # fit ETS model to LT2
 ETS_LT2 <-  stlf(LT2_daily_training, h = 365)
@@ -538,7 +538,7 @@ print(ETS_SAL_scores)
 
 ##### SSES
 
-```{r SSES Model LT2 and SAL, include=FALSE}
+```{r SSES Model LT2 and SAL, warning=FALSE, include=FALSE}
 # fit SSESS model to LT2 with year of holdout
 SSES_LT2 <- es(ts_LT2_clean, model="ZZZ", h=n_for, holdout=TRUE)
 
@@ -586,7 +586,7 @@ print(SSES_SAL_scores)
 
 ##### Neural Network
 
-```{r NN Model LT2 and SAL, include=FALSE}
+```{r NN Model LT2 and SAL, warning=FALSE, include=FALSE}
 # fit NN model to LT2 with year of holdout
 NN_LT2_fit <- nnetar(LT2_daily_training, p=1, P=1)
 
@@ -642,7 +642,7 @@ print(NN_scores_SAL)
 
 ##### Performance
 
-```{r Comparing Performance Metrics, echo=FALSE}
+```{r Comparing Performance Metrics, warning=FALSE, echo=FALSE}
 
 #create data frame for LT2 scores
 LT2_scores <- as.data.frame(rbind(auto_LT2_scores, ETS_LT2_scores, SSES_LT2_scores, NN_scores_LT2))
@@ -678,7 +678,7 @@ kbl(SAL_scores,
 
 ```
 
-```{r plot the model fits, echo=FALSE, fig.cap="Figure 9. Model Fit Comparisons for Well LT2"}
+```{r plot the model fits, echo=FALSE, warning=FALSE, fig.cap="Model Fit Comparisons for Well LT2"}
 
 #make time series objects for the last two years of data
 LT2_depth_end <- LT2_depth %>%
@@ -718,7 +718,7 @@ grid.arrange(plot_LT2_all_for, plot_LT2_all_for_end, ncol=1)
 
 ```
 
-```{r plot the test zone, echo=FALSE, fig.cap="Figure 10. Model Fit Comparisons for Well SAL"}
+```{r plot the test zone, echo=FALSE, warning=FALSE, fig.cap="Model Fit Comparisons for Well SAL"}
 
   
 #SAL forecast comparison
@@ -752,7 +752,7 @@ According to our results, the SARIMA model resulted in the lowest root mean squa
 
 ##### Improving Performance with Exogenous Variables
 
-```{r create monthly exogenous variables for Sarima, include=FALSE}
+```{r create monthly exogenous variables for Sarima, warning=FALSE, include=FALSE}
 
 #subset columns of interest
 monthly_reg <- auser_raw %>%
@@ -793,7 +793,7 @@ ts_temp_monthly_reg <- tsclean(ts(temp_reg_monthly[,2],start=c(2007,04,01),frequ
 
 ```
 
-```{r create training and testing sets with the exogenous variables, include=FALSE}
+```{r create training and testing sets with the exogenous variables, warning=FALSE, include=FALSE}
 
 n_for_month = 12
 
@@ -815,7 +815,7 @@ temp_monthly_testing_reg <- subset(ts_temp_monthly_reg, start = length(ts_temp_m
 
 ```
 
-```{r Sarima with exogenous variables for LT2, include=FALSE}
+```{r Sarima with exogenous variables for LT2, warning=FALSE, include=FALSE}
 
 #LT2 auto sarima with rainfall regressor
 auto_LT2_rain_reg_train <- auto.arima(LT2_monthly_training_reg, xreg=rain_monthly_training_reg)
@@ -863,7 +863,7 @@ print(auto_LT2_temp_reg_scores)
 
 ```
 
-```{r Sarima with exogenous variables for SAL, include=FALSE}
+```{r Sarima with exogenous variables for SAL, warning=FALSE, include=FALSE}
 
 #SAL auto sarima with rainfall regressor
 auto_SAL_rain_reg_train <- auto.arima(SAL_monthly_training_reg, xreg=rain_monthly_training_reg)
@@ -911,7 +911,7 @@ print(auto_SAL_temp_reg_scores)
 
 ```
 
-```{r compare accuracy for all SARIMAs, echo=FALSE}
+```{r compare accuracy for all SARIMAs, warning=FALSE, echo=FALSE}
 
 #create data frame for LT2 SARIMA scores
 LT2_sarima_scores <- as.data.frame(rbind(auto_LT2_scores, 
@@ -951,7 +951,7 @@ kbl(SAL_sarima_scores,
 
 ```
 
-```{r SARIMA comparison plots, echo=FALSE, fig.cap="Figure 11. SARIMA Model Improvements when Exogenous Variables are Included at Wells LT2 and SAL"}
+```{r SARIMA comparison plots, echo=FALSE, warning=FALSE, fig.cap="SARIMA Model Improvements when Exogenous Variables are Included at Wells LT2 and SAL"}
 
 #make time series objects for the last two years of data
 LT2_depth_end <- LT2_depth %>%
