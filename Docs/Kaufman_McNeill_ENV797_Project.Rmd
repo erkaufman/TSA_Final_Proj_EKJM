@@ -47,7 +47,7 @@ The dataset for this analysis was collected from the [Acea Group Smart Water Ana
 
 The dataset for the Auser Aquifer includes daily depth to groundwater measurements (in meters) from five different wells across the north and south sectors. Wells SAL, PAG, CoS, and DIEC represent the northern unconfined portion while Well LT2 represents the southern confined portion. We also have daily temperature data at four sites, daily rainfall data at ten sites, and daily volume data from five different water treatment facilities.
 
-```{r import data, warning=FALSE, echo=FALSE, fig.cap="Raw Depth to Groundwater Series"}
+```{r import data, echo=FALSE, fig.cap="Raw, warning=FALSE}
 
 getwd()
 
