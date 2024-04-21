@@ -47,7 +47,7 @@ The dataset for this analysis was collected from the [Acea Group Smart Water Ana
 
 The dataset for the Auser Aquifer includes daily depth to groundwater measurements (in meters) from five different wells across the north and south sectors. Wells SAL, PAG, CoS, and DIEC represent the northern unconfined portion while Well LT2 represents the southern confined portion. We also have daily temperature data at four sites, daily rainfall data at ten sites, and daily volume data from five different water treatment facilities.
 
-```{r import data, echo=FALSE, fig.cap="Raw, warning=FALSE}
+```{r import data, echo=FALSE, fig.cap="Raw", warning=FALSE}
 
 getwd()
 
@@ -989,7 +989,55 @@ grid.arrange(plot_LT2_reg_compare, plot_SAL_reg_compare, ncol=1)
 
 ```
 
+###### Forecasting into the future FIX THIS?!
+
+```{r applying best models to the whole dataset and forecasting into the future}
+#forecast of sarima with temp for SAL a year into the future
+#LT2 auto sarima with rainfall regressor
+auto_SAL_temp_reg_all <- auto.arima(ts_SAL_monthly_reg, 
+                                    xreg=ts_temp_monthly_reg)
+auto_SAL_temp_reg_for <- forecast(auto_SAL_temp_reg_all, 
+                                  h=12,  
+                                  xreg=ts_temp_monthly_reg)
+
+#forecast of sarmia with temp for LT2 a year into the future
+auto_LT2_temp_reg_all <- auto.arima(ts_LT2_monthly_reg, 
+                                    xreg=ts_temp_monthly_reg)
+auto_LT2_temp_reg_for <- forecast(auto_LT2_temp_reg_all,
+                                  h=1,
+                                  xreg=ts_temp_monthly_reg)
+
+#plotting the forecasts
+autoplot(auto_LT2_temp_reg_for) + 
+  ylab("depth to groundwater (meters)") + 
+  theme_light()
+
+autoplot(auto_SAL_temp_reg_for) + 
+  ylab("depth to groundwater (meters)") + 
+  theme_light()
+
+#plot model + observed data
+autoplot(ts_LT2_monthly_reg, series = "Original") +
+  autolayer(auto_LT2_temp_reg_for, series = "Forecast", PI = FALSE) +
+  ylab("depth to groundwater (meters)") +
+  ggtitle("Auto Sarima LT2 Forecast") +
+  theme_light()
+
+
+```
+
 #### Summary and Conclusions
+
+We used four different kinds of models to predict depth to groundwater at two wells within confined and unconfined portions of the Auser Aquifer. These models were a seasonal arima, exponential smoothing, state space exponential smoothing, and a neural network. We first explored model performance without exogenous variables and found that ETS best predicted depth to groundwater in the confined aquifer, and the seasonal auto arima best predicted depth to groundwater in the unconfined aquifer. [reference the figures and table that show this here]
+
+We then incorporated exogenous variables into our seasonal auto arima model, and found that this improved model perfomance for both wells (reference the figures this is in). For both of the wells we explored, using temperature as an exogenous variable improved model accuracy the greatest, [RMSE and MAPE are ___].
+
+The seasonal auto arima for well LT2 (confined) had p,d,q of ___. 
+
+The seasonal auto arima for well SAL (unconfined) had p,d,q of ___. 
+
+It makes sense that climatic variables of temperature and rainfall both improved model performance when used an exogenous variables. Aquifers are recharged during rainfall events, and water can evaporate from them during extreme heat. We expected that rainfall would improve model performance more than temperature when predicitng depth to groundwater, but perhaps there is a lag in the correlation that we were unable to account for, and could be explored futher to improve the model even more. 
+
 
 Summarize your major findings from your analyses in a few paragraphs and plots. What conclusions do you draw from your findings? Any insights on how to improve the model?
 

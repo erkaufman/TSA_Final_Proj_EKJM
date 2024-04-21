@@ -842,7 +842,7 @@ monthly_reg <- auser_raw %>%
   mutate(Month = floor_date(Date, "month")) %>%
   group_by(Month) %>%
   summarize_all(mean, na.rm = TRUE) %>%
-  select(Month, LT2, SAL, Temperature_Lucca_Orto_Botanico, Rainfall_Gallicano) %>%
+  select(Month, LT2, SAL, Temperature_Lucca_Orto_Botanico, Rainfall_Monte_Serra) %>%
   slice(110:268)
 
 #create a dataframe for each regressor that starts at the unique first month of data
@@ -850,7 +850,7 @@ temp_reg_monthly <- monthly_reg %>%
   select(Month, Temperature_Lucca_Orto_Botanico)
 
 rain_reg_monthly <- monthly_reg %>%
-  select(Month, Rainfall_Gallicano)
+  select(Month, Rainfall_Monte_Serra)
 
 LT2_for_reg <- monthly_reg %>%
   select(Month, LT2)
@@ -987,6 +987,37 @@ autoplot(ts_SAL_monthly_reg, series = "Original") +
 
 #check the MAPE
 auto_SAL_temp_reg_scores <- accuracy(auto_SAL_temp_reg_test$mean, SAL_monthly_testing_reg)
+print(auto_SAL_temp_reg_scores)
+
+```
+
+```{r using both temp and rainfall for SAL}
+regressors_train <- as.matrix(data.frame("rain"=rain_monthly_training_reg, "temp"=temp_monthly_training_reg))
+
+regressors_test <- as.matrix(data.frame("rain"=rain_monthly_testing_reg, "temp"=temp_monthly_testing_reg))
+
+regressors_all <-as.matrix(data.frame("rain"=ts_rain_monthly_reg, "temp"=ts_temp_monthly_reg))
+
+#SAL auto sarima with both regressors
+auto_SAL_temp_reg_2_train <- auto.arima(SAL_monthly_training_reg, xreg=regressors_train)
+
+auto_SAL_temp_reg_2_test <- forecast(auto_SAL_temp_reg_2_train, h=12,  xreg=regressors_train)
+
+#plot foresting results
+autoplot(auto_SAL_temp_reg_2_test)+ 
+  ylab("depth to groundwater (meters)") + 
+  ggtitle("Auto Sarima SAL with Temperature Regressor") +
+  theme_light()
+
+#plot model + observed data
+autoplot(ts_SAL_monthly_reg, series = "Original") +
+  autolayer(auto_SAL_temp_reg_2_test, series = "Auto Sarima W/ Reg", PI = FALSE) +
+  ylab("depth to groundwater (meters)") +
+  ggtitle("Auto Sarima SAL with Temperature Regressor") +
+  theme_light()
+
+#check the MAPE
+auto_SAL_temp_reg_scores <- accuracy(auto_SAL_temp_reg_2_test$mean, SAL_monthly_testing_reg)
 print(auto_SAL_temp_reg_scores)
 
 ```
