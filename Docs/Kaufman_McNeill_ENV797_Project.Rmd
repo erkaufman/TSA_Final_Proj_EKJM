@@ -1,5 +1,5 @@
 ---
-title: "Kaufman_McNeill_ENV797_Project"
+title: "ENV 797 Final Project"
 author: "Emma Kaufman and Jenn McNeill"
 date: "2024-04-10"
 output: pdf_document
@@ -27,27 +27,23 @@ library(gridExtra)
 
 #### Introduction, Motivation, Relevance, Objectives
 
+
 This project focuses on predicting water availability in an Italian aquifer managed by Acea Group, a leading Italian utility operator. The group provides water services to 9 million inhabitants across Italy.
 
 In order to best service their customers, the Acea group must understand how much water is available in the water bodies from which they extract. Forecasting water availability in a water body is necessary to ensure daily consumption needs are met.
 
-The UN reported that groundwater provides “half of the volume of water withdrawn for domestic use by the global population” and that water use is expected to grow 1% per year over the next thirty years (UN, 2022). Thus, it is important to explore how much groundwater will be available in the future. If groundwater levels are forecasted to drop dramatically, these forecasts can be used to urge for more efficient water use practices and investments into groundwater recharge strategies.
+The UN reported that groundwater provides “half of the volume of water withdrawn for domestic use by the global population” and that water use is expected to grow 1% per year over the next thirty years (UN, 2022). Thus, it is important to explore how much groundwater will be available in the future. If groundwater levels are forecasted to drop dramatically, these models can be used to urge for more efficient water use practices and investments into groundwater recharge strategies.
 
-We focused our study in Italy due to the comprehensive data we were able to access in the region. In the following report, we examine the best exogenous variables that can help accurately predict groundwater levels. We hope that these findings offer insight about how to focus groundwater forecasting efforts in other regions across the globe.
+We focused our study in Italy due to the comprehensive data we were able to access in the region. In the following report, our objective is to examine the best models and exogenous variables that can help accurately predict groundwater levels. We hope that these findings offer insight about how to focus groundwater forecasting efforts in other regions across the globe.
 
-(add more about objectives?)
 
 #### Dataset information
 
-Provide information on how the dataset for this analysis were collected (source), the data contained in the dataset (format). Describe how you wrangled/processed your dataset to get the time series object.
 
-Add a table that summarizes your data structure (variables, units, ranges and/or central tendencies, data source if multiple are used, etc.). This table should inserted as a `kable` function in an R chunk. Just show the first 10 rows of your data. Do not include the code used to generate your table.
+The data for this analysis were collected from the [Acea Group Smart Water Analytics Competition on Kaggle](https://www.kaggle.com/c/acea-water-prediction/data). As a utility operator, they are concerned with preserving their water bodies which include a combination of water springs, lakes, rivers, and aquifers. The nine unique datasets from this kaggle competition each had different attributes and characteristics. For our final project, we focused our time series modeling and forecasting on the Auser Aquifer. Our objective is to predict the amount of water in the Auser Aquifer by modeling depth to groundwater and simultaneously evaluating how rainfall and temperature may impact our predictions as exogenous variables.
 
-The dataset for this analysis was collected from the [Acea Group Smart Water Analytics Competition on Kaggle](https://www.kaggle.com/c/acea-water-prediction/data). As a utility operator, they are concerned with preserving their water bodies which include a combination of water springs, lakes, rivers, and aquifers. The nine unique datasets from this kaggle competition each had different attributes and characteristics. For our final project, we focused our time series modeling and forecasting on the Auser Aquifer. Our objective is to predict the amount of water in the Auser Aquifer by modeling the depth to groundwater and simultaneously evaluating how rainfall and temperature may impact our predictions as exogenous variables.
+The dataset for the Auser Aquifer includes daily depth to groundwater measurements (in meters) from five different wells across the north and south sectors. Wells SAL, PAG, CoS, and DIEC represent the northern unconfined portion of the aquifer, while Well LT2 represents the southern confined portion of the aquifer. We also have daily temperature data at four sites, daily rainfall data at ten sites, and daily volume data from five different water treatment facilities that extract water from this aquifer. A sample of these data are shown in Tables 1 and 2, the units for the measurements are found in Table 3. 
 
-The dataset for the Auser Aquifer includes daily depth to groundwater measurements (in meters) from five different wells across the north and south sectors. Wells SAL, PAG, CoS, and DIEC represent the northern unconfined portion while Well LT2 represents the southern confined portion. We also have daily temperature data at four sites, daily rainfall data at ten sites, and daily volume data from five different water treatment facilities.
-
-\newpage
 
 ```{r import data, message=FALSE, warning=FALSE, include=FALSE}
 
@@ -141,11 +137,11 @@ head_auser <- as.data.frame(auser_raw[which(complete.cases(auser_raw))[1:10], ])
 head_auser$Date <- format(head_auser$Date, "%m-%d-%y")
 head_auser <- t(head_auser)
 
-kbl(head_auser[,1:5], col.names = NULL, caption="Auser Aquifer Data Head Rows 1-5") %>%
+kbl(head_auser[,1:5], col.names = NULL, caption="Example Auser Aquifer Data Rows 1-5") %>%
   kable_styling(font_size = 10,
                 full_width = FALSE)
 
-kbl(head_auser[,6:10], col.names = NULL, caption="Auser Aquifer Data Head Rows 6-10") %>%
+kbl(head_auser[,6:10], col.names = NULL, caption="Example Auser Aquifer Data Head Rows 6-10") %>%
   kable_styling(font_size = 10,
                 full_width = FALSE)
 ```
@@ -171,8 +167,10 @@ kbl(data_information, caption="Acea Group Auser Aquifer Data Structure") %>%
 
 ```
 
+\newpage
 
-The first obstacle with wrangling our data came when we realized that the data for each variable started at a different date. We found this issue by plotting the five depth to groundwater lines and seeing a large lag before the data started, NA values within each series, and a few random "zero" values that we assumed to be errors. To rectify this issue, we converted all "zero" values to NA, found the start date for each well's data, and then converted each well's data into a time series object. When we plotted these five time series together, we still had gaps of NA data. We ran the tsclean() function to fill in the gaps of missing data with interpolated values and then had five clean series with no data gaps.
+The first obstacle with wrangling our data came when we realized that the data for each variable started at a different date. We found this issue by plotting the five depth to groundwater lines and seeing a large lag before the data started, NA values within each series, and a few random "zero" values that we assumed to be errors. To rectify this issue, we converted all "zero" values to NA, found the start date for each well's data, and then converted each well's data into a time series object. When we plotted these five time series together, we still had gaps of NA data. We ran the tsclean() function to fill in the gaps of missing data with interpolated values and then had five clean series with no data gaps, as displayed in figure 1 below.
+
 
 ```{r create ts objects for each well, warning=FALSE, include=FALSE}
 
@@ -227,29 +225,10 @@ autoplot(ts_LT2_clean, series = "LT2")+
 
 \newpage
 
-```{r , echo=FALSE, warning=FALSE, fig.cap="LT2 and SAL Time Series", message=FALSE}
-
-#plot only the wells of interest
-autoplot(ts_LT2_clean, series = "LT2")+
-  autolayer(ts_SAL_clean, series = "SAL")+
-  labs(x = "Year", y = "Depth to Groundwater (m)", color = "Well")+
-  theme_light()+
-  ggtitle("Cleaned Time Series of Depth to Groundwater at Each Well")+
-  scale_x_continuous(name = "Year", breaks = seq(from=2006, to=2022, by=2))+
-  scale_y_continuous(name = "Depth to Groundwater (m)", 
-                     breaks = seq(from=-16, to=0, by=2))
-
-```
 
 #### Analysis (Methods and Models)
 
-Describe the analysis and tests that were performed. Described the components of the time series you identified. List any packages and functions used. Include visualizations of your dataset (i.e. time series plot, ACF, PACF, etc).
-
-Format your R chunks so that graphs are displayed but code is not displayed. Accompany these graphs with text sections that describe the visualizations and provide context for further analyses.
-
-Each figure should be accompanied by a caption, and referenced within the text if applicable.
-
-The first step of analysis that we performed was running the correlation function on our depth to groundwater data to discern whether the depth to groundwater values at the five wells were correlated to one another. We found that the four north wells had similar correlation values to one another and that the one south well was weakly correlated to the others. Because there were not strong correlations between the wells, we decided to focus the rest of our analysis on one north, confined well (SAL) and one south, unconfined well (LT2). These two wells had the most complete time series data.
+The first step of analysis that we performed was running the correlation function on our depth to groundwater data to discern whether the depth to groundwater values at the five wells were correlated to one another, shown in Figure 2. We found that the four north wells had similar correlation values to one another and that the one south well was weakly correlated to the others. Because there were not strong correlations between the wells, we decided to focus the rest of our analysis on one north, confined well (SAL) and one south, unconfined well (LT2). These two wells had the most complete time series data, as displayed in Figure 3.
 
 \newpage
 
@@ -272,7 +251,24 @@ corrplot.mixed(auser_correlation, upper = "ellipse")
 
 ```
 
-We plotted the ACF and PACF for each well using a lag time of five years to get a sense for whether our data had seasonal patterns. Both ACF graphs show peaks and troughs at regular intervals, so we know that our data has yearly seasonality. Knowing what we know about temperature and rainfall affecting aquifer storage, it makes sense that the depth to groundwater in the aquifer is changing with respect to the season.
+\newpage
+
+```{r , echo=FALSE, warning=FALSE, fig.cap="LT2 and SAL Time Series", message=FALSE}
+
+#plot only the wells of interest
+autoplot(ts_LT2_clean, series = "LT2")+
+  autolayer(ts_SAL_clean, series = "SAL")+
+  labs(x = "Year", y = "Depth to Groundwater (m)", color = "Well")+
+  theme_light()+
+  ggtitle("Cleaned Time Series of Depth to Groundwater at Each Well")+
+  scale_x_continuous(name = "Year", breaks = seq(from=2006, to=2022, by=2))+
+  scale_y_continuous(name = "Depth to Groundwater (m)", 
+                     breaks = seq(from=-16, to=0, by=2))
+
+```
+
+
+We then plotted the ACF and PACF for each well using a lag time of five years to get a sense for whether our data had seasonal patterns, displayed in Figure 4. Both ACF graphs show peaks and troughs at regular intervals, so we determined that our data have yearly seasonality. Knowing that temperature and rainfall affect aquifer storage, it makes sense that the depth to groundwater in the aquifer is changing with respect to the season.
 
 \newpage
 
@@ -297,7 +293,7 @@ grid.arrange(ACF_LT2, ACF_SAL, ncol=1)
 ```
 
 
-In order to visualize our data in another way, we decomposed the time series for each well into its seasonal, trend, and random components using the decompose() function with both the additive and multiplicative methods. \*\*WRITE SOMETHING ABOUT CHOOSING WHICH METHOD IS BETTER MOVING FORWARD? OR MAYBE JUST REMOVE WHICHEVER ONE WE DECIDE TO NOT USE?
+In order to visualize our data in another way, we decomposed the time series for each well into its seasonal, trend, and random components using the decompose() function, shown in Figure 5 and Figure 6 below.
 
 \newpage
 
@@ -324,9 +320,9 @@ plot(decompose_ts_SAL_add)
 # plot(decompose_ts_SAL_mult)
 ```
 
-According to the decomposition, both of our wells showed depth to groundwater values that trended upwards over time. To model our data, we felt it was important to understand whether the trends were monotonic or stochastic. To arrive at an answer, we deseasoned the time series and then ran tests on them to classify their trends. The LT2 well in the confined portion of the aquifer turned out to have a stochastic trend, while the SAL well in the unconfined aquifer turned out to have a deterministic trend.
+According to the decomposition, both of our wells showed depth to groundwater values that trended upwards over time. To model our data, we felt it was important to understand whether the trends were monotonic or stochastic. To arrive at an answer, we deseasoned the time series and then ran tests on them to classify their trends. The LT2 well in the confined portion of the aquifer turned out to have a stochastic trend, while the SAL well in the unconfined aquifer turned out to have a deterministic trend. A summary of the statistical tests used to determine this are seen in Table 4 below. We hypothesized that these different trends are due to the fact that wells are monitoring different kinds of aquifers, confined and unconfined. 
 
-|            | SAL North Well       | LT2 South Well      |
+|            | SAL North Well (confined)       | LT2 South Well (unconfined)   |
 |------------|----------------------|---------------------|
 | ADF Test   | p-value = 0.01       | p-value = 0.9466    |
 | Result     | Reject Null          | Fail to Reject Null |
@@ -374,7 +370,7 @@ summary(MannKendall(ts_SAL_deseas))
 
 \newpage
 
-```{r deseasoned time series plot to show trend, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Trend Visualization for Deseasoned Time Series of Depth to Groundwater at Wells LT2 and SAL"}
+```{r deseasoned time series plot to show trend, fig.cap="Trend Visualization for Deseasoned Time Series of Depth to Groundwater at Wells LT2 and SAL", message=FALSE, warning=FALSE, include=FALSE}
 
 #Mann Kendall test p-value indicates we should reject the null hypothesis. Data has a deterministic trend.
 
@@ -470,9 +466,9 @@ SAL_daily_testing <- subset(ts_SAL_clean, start = length(ts_SAL_clean) - n_for)
 
 ```
 
-Once we analyzed the time series, we were ready to start fitting models. Our process for fitting models was to fit four models on each well by holding out a year of data. The following section shows the results of testing the four models against the actual time series values for the final year.
+Once we analyzed the time series, we were ready to start fitting models. Our process for fitting models was to fit them on each well by holding out a year of data. We then evaluated model performance on the final year of held out data.
 
-####SARIMA
+The results of the Auto Sarima (SARIMA), the Exponential Smoothing State Space (ETS), the State Space Exponential Smoothing (SSES), and the Neural Network (NN) models compared to the observed data are shown in Figures 7 and 8 below. A summary of the model perfomance metrics against the held-out test data are in Tables 5 and 6. 
 
 ```{r Auto Sarima, warning=FALSE, include=FALSE}
 
@@ -520,7 +516,6 @@ print(auto_SAL_scores)
 
 ```
 
-####ETS
 
 ```{r ETS Model, warning=FALSE, include=FALSE}
 
@@ -564,7 +559,6 @@ print(ETS_SAL_scores)
 
 ```
 
-####SSES
 
 ```{r SSES Model LT2 and SAL, warning=FALSE, include=FALSE}
 # fit SSESS model to LT2 with year of holdout
@@ -612,7 +606,6 @@ SSES_SAL_scores <- accuracy(SSES_SAL$forecast, SAL_daily_testing)
 print(SSES_SAL_scores)
 ```
 
-####Neural Network
 
 ```{r NN Model LT2 and SAL, warning=FALSE, include=FALSE}
 # fit NN model to LT2 with year of holdout
@@ -666,11 +659,11 @@ NN_scores_SAL <- accuracy(NN_SAL_for$mean, SAL_daily_testing)
 print(NN_scores_SAL)
 ```
 
-\*\*NOTE PLEASE CHECK THE NAMES OF THESE MODELS TO SEE IF THEYRE RIGHT?? After running the Auto Sarima (SARIMA), the Exponential Smoothing State Space Model (ETS), the Simple Exponential Smoothing (SSES), and the Neural Network (NN) models, we plotted all tested models together on a graph and compared the predicted values for each model to the original data using the accuracy() function.
 
 \newpage
 
 ##### Performance
+
 ```{r plot the model fits, echo=FALSE, warning=FALSE, fig.cap="Model Fit Comparisons for Well LT2"}
 
 #make time series objects for the last two years of data
@@ -744,7 +737,7 @@ grid.arrange(plot_SAL_all_for, plot_SAL_all_for_end, ncol=1)
 
 \newpage
 
-```{r Comparing Performance Metrics, warning=FALSE, echo=FALSE}
+```{r Comparing Performance Metrics, warning=FALSE, include=FALSE}
 
 #create data frame for LT2 scores
 LT2_scores <- as.data.frame(rbind(auto_LT2_scores, ETS_LT2_scores, SSES_LT2_scores, NN_scores_LT2))
@@ -780,9 +773,7 @@ kbl(SAL_scores,
 
 ```
 
-According to our results, the SARIMA model resulted in the lowest root mean square error (RMSE) for the LT2 well and the ETS model resulted in the lowest RMSE for the SAL well. To continue our analysis, we wanted to improve upon these basic models by adding in exogenous variables and seeing if our RMSE values decreased. For each well, we started by adding rain as an exogenous variable and then added temperature as an exogenous variable in the SARIMA model. Adding the exogenous variables successfully improved the accuracy of our model fit in the last year of data.
-
-##### Improving Performance with Exogenous Variables
+According to our results, the SARIMA model resulted in the lowest root mean square error (RMSE) for the LT2 well and the ETS model resulted in the lowest RMSE for the SAL well. To continue our analysis, we wanted to improve upon these basic models by adding in exogenous variables and seeing if our RMSE values decreased. For each well, we started by adding rain as an exogenous variable and then added temperature as an exogenous variable in the SARIMA model. Adding the exogenous variables successfully improved the accuracy of our model fit in the last year of data. the SARIMA model results with exogenous variables are seen in Figure 10 below. Tables 7 and 8 compare performance metrics of the SARIMA model without exogenous variables and for the models that included rainfall and temperature. We found that each of the wells, the SARIMA model with temperature as an exogenous variable had the lowest RMSE and MAPE.
 
 ```{r create monthly exogenous variables for Sarima, warning=FALSE, include=FALSE}
 
@@ -985,7 +976,7 @@ grid.arrange(plot_LT2_reg_compare, plot_SAL_reg_compare, ncol=1)
 
 \newpage
 
-```{r compare accuracy for all SARIMAs, warning=FALSE, echo=FALSE}
+```{r compare accuracy for all SARIMAs, warning=FALSE, include=FALSE}
 
 #create data frame for LT2 SARIMA scores
 LT2_sarima_scores <- as.data.frame(rbind(auto_LT2_scores, 
@@ -1006,7 +997,9 @@ cat("The best LT2 Well Sarima model by RMSE is:", row.names(LT2_sarima_scores[be
 #choose SAL model with lowest RMSE #choose a different variable here if you want
 best_model_SAL_reg <- which.min(SAL_sarima_scores[,"RMSE"])
 cat("The best SAL Well Sarima model by RMSE is:", row.names(SAL_sarima_scores[best_model_SAL_reg,]))  
+```
 
+```{r summary tables of SARIMA models, echo=FALSE, message=FALSE, warning=FALSE}
 #kbl for LT2 SARIMA
 kbl(LT2_sarima_scores, 
       caption = "Forecast Accuracy for Sarima with Regressors at Well LT2",
@@ -1027,7 +1020,7 @@ kbl(SAL_sarima_scores,
 
 ###### Forecasting into the future FIX THIS?!
 
-```{r applying best models to the whole dataset and forecasting into the future}
+```{r applying best models to the whole dataset and forecasting into the future, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 #forecast of sarima with temp for SAL a year into the future
 #LT2 auto sarima with rainfall regressor
 auto_SAL_temp_reg_all <- auto.arima(ts_SAL_monthly_reg, 
@@ -1066,13 +1059,16 @@ autoplot(ts_LT2_monthly_reg, series = "Original") +
 
 We used four different kinds of models to predict depth to groundwater at two wells within confined and unconfined portions of the Auser Aquifer. These models were a seasonal arima, exponential smoothing, state space exponential smoothing, and a neural network. We first explored model performance without exogenous variables and found that ETS best predicted depth to groundwater in the confined aquifer, and the seasonal auto arima best predicted depth to groundwater in the unconfined aquifer. [reference the figures and table that show this here]
 
-We then incorporated exogenous variables into our seasonal auto arima model, and found that this improved model perfomance for both wells (reference the figures this is in). For both of the wells we explored, using temperature as an exogenous variable improved model accuracy the greatest, [RMSE and MAPE are \_\_\_].
+We then incorporated exogenous variables into our seasonal auto arima model, and found that this improved model performance for both wells (reference the figures this is in). For both of the wells we explored, using temperature as an exogenous variable improved model accuracy the greatest, [RMSE and MAPE are \_\_\_].
+
+The well within the unconfined aquifer (SAL) had more significant improvement in model forecast when including exogenous variables than the well within the confined aquifer (LT2)
 
 The seasonal auto arima for well LT2 (confined) had p,d,q of \_\_\_.
 
 The seasonal auto arima for well SAL (unconfined) had p,d,q of \_\_\_.
 
-It makes sense that climatic variables of temperature and rainfall both improved model performance when used an exogenous variables. Aquifers are recharged during rainfall events, and water can evaporate from them during extreme heat. We expected that rainfall would improve model performance more than temperature when predicitng depth to groundwater, but perhaps there is a lag in the correlation that we were unable to account for, and could be explored futher to improve the model even more.
+
+It makes sense that climatic variables of temperature and rainfall both improved model performance when used an exogenous variables. Aquifers are recharged during rainfall events, and water can evaporate from them during extreme heat. We expected that rainfall would improve model performance more than temperature when predicting depth to groundwater, but perhaps there is a lag in the correlation that we were unable to account for, and could be explored further to improve the model even more.
 
 Summarize your major findings from your analyses in a few paragraphs and plots. What conclusions do you draw from your findings? Any insights on how to improve the model?
 
