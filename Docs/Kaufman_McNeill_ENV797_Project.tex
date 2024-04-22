@@ -708,7 +708,7 @@ ETS & 0.22956 & 0.30488 & 0.25138 & -1.85643 & 2.02133 & 0.97974 & 8.71599\\
 \hline
 SSES & 0.23629 & 0.30439 & 0.25336 & -1.90866 & 2.03761 & 0.97878 & 8.70820\\
 \hline
-NN & -0.17619 & 0.28775 & 0.21810 & 1.34749 & 1.69082 & 0.98687 & 7.80404\\
+NN & -0.21432 & 0.32034 & 0.24288 & 1.64752 & 1.88170 & 0.98756 & 8.69056\\
 \hline
 \end{tabular}
 \end{table}
@@ -727,7 +727,7 @@ SARIMA & 0.28294 & 0.51523 & 0.35878 & -6.16268 & 7.50082 & 0.47825 & 1.27277\\
 \hline
 SSES & 0.41811 & 0.63229 & 0.43603 & -8.99277 & 9.30487 & 0.98020 & 7.73355\\
 \hline
-NN & 0.26822 & 0.52986 & 0.34386 & -6.06948 & 7.40000 & 0.97902 & 6.57996\\
+NN & 0.29186 & 0.54383 & 0.35345 & -6.52960 & 7.61080 & 0.97916 & 6.74482\\
 \hline
 \end{tabular}
 \end{table}
@@ -807,8 +807,88 @@ SARIMA w/ RAIN & 0.11106 & 0.41086 & 0.32007 & -2.80383 & 6.51817 & 0.42753 & 0.
 at Wells LT2 and SAL}
 \end{figure}
 
+Forecasting into the future FIX THIS?!
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\#forecast of sarima with temp for SAL a year into the future}
+\CommentTok{\#LT2 auto sarima with rainfall regressor}
+\NormalTok{auto\_SAL\_temp\_reg\_all }\OtherTok{\textless{}{-}} \FunctionTok{auto.arima}\NormalTok{(ts\_SAL\_monthly\_reg, }
+                                    \AttributeTok{xreg=}\NormalTok{ts\_temp\_monthly\_reg)}
+\NormalTok{auto\_SAL\_temp\_reg\_for }\OtherTok{\textless{}{-}} \FunctionTok{forecast}\NormalTok{(auto\_SAL\_temp\_reg\_all, }
+                                  \AttributeTok{h=}\DecValTok{12}\NormalTok{,  }
+                                  \AttributeTok{xreg=}\NormalTok{ts\_temp\_monthly\_reg)}
+
+\CommentTok{\#forecast of sarmia with temp for LT2 a year into the future}
+\NormalTok{auto\_LT2\_temp\_reg\_all }\OtherTok{\textless{}{-}} \FunctionTok{auto.arima}\NormalTok{(ts\_LT2\_monthly\_reg, }
+                                    \AttributeTok{xreg=}\NormalTok{ts\_temp\_monthly\_reg)}
+\NormalTok{auto\_LT2\_temp\_reg\_for }\OtherTok{\textless{}{-}} \FunctionTok{forecast}\NormalTok{(auto\_LT2\_temp\_reg\_all,}
+                                  \AttributeTok{h=}\DecValTok{1}\NormalTok{,}
+                                  \AttributeTok{xreg=}\NormalTok{ts\_temp\_monthly\_reg)}
+
+\CommentTok{\#plotting the forecasts}
+\FunctionTok{autoplot}\NormalTok{(auto\_LT2\_temp\_reg\_for) }\SpecialCharTok{+} 
+  \FunctionTok{ylab}\NormalTok{(}\StringTok{"depth to groundwater (meters)"}\NormalTok{) }\SpecialCharTok{+} 
+  \FunctionTok{theme\_light}\NormalTok{()}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{Kaufman_McNeill_ENV797_Project_files/figure-latex/applying best models to the whole dataset and forecasting into the future-1.pdf}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{autoplot}\NormalTok{(auto\_SAL\_temp\_reg\_for) }\SpecialCharTok{+} 
+  \FunctionTok{ylab}\NormalTok{(}\StringTok{"depth to groundwater (meters)"}\NormalTok{) }\SpecialCharTok{+} 
+  \FunctionTok{theme\_light}\NormalTok{()}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{Kaufman_McNeill_ENV797_Project_files/figure-latex/applying best models to the whole dataset and forecasting into the future-2.pdf}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\#plot model + observed data}
+\FunctionTok{autoplot}\NormalTok{(ts\_LT2\_monthly\_reg, }\AttributeTok{series =} \StringTok{"Original"}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{autolayer}\NormalTok{(auto\_LT2\_temp\_reg\_for, }\AttributeTok{series =} \StringTok{"Forecast"}\NormalTok{, }\AttributeTok{PI =} \ConstantTok{FALSE}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{ylab}\NormalTok{(}\StringTok{"depth to groundwater (meters)"}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{ggtitle}\NormalTok{(}\StringTok{"Auto Sarima LT2 Forecast"}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{theme\_light}\NormalTok{()}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{Kaufman_McNeill_ENV797_Project_files/figure-latex/applying best models to the whole dataset and forecasting into the future-3.pdf}
+
 \hypertarget{summary-and-conclusions}{%
 \paragraph{Summary and Conclusions}\label{summary-and-conclusions}}
+
+We used four different kinds of models to predict depth to groundwater
+at two wells within confined and unconfined portions of the Auser
+Aquifer. These models were a seasonal arima, exponential smoothing,
+state space exponential smoothing, and a neural network. We first
+explored model performance without exogenous variables and found that
+ETS best predicted depth to groundwater in the confined aquifer, and the
+seasonal auto arima best predicted depth to groundwater in the
+unconfined aquifer. {[}reference the figures and table that show this
+here{]}
+
+We then incorporated exogenous variables into our seasonal auto arima
+model, and found that this improved model perfomance for both wells
+(reference the figures this is in). For both of the wells we explored,
+using temperature as an exogenous variable improved model accuracy the
+greatest, {[}RMSE and MAPE are \_\_\_{]}.
+
+The seasonal auto arima for well LT2 (confined) had p,d,q of \_\_\_.
+
+The seasonal auto arima for well SAL (unconfined) had p,d,q of \_\_\_.
+
+It makes sense that climatic variables of temperature and rainfall both
+improved model performance when used an exogenous variables. Aquifers
+are recharged during rainfall events, and water can evaporate from them
+during extreme heat. We expected that rainfall would improve model
+performance more than temperature when predicitng depth to groundwater,
+but perhaps there is a lag in the correlation that we were unable to
+account for, and could be explored futher to improve the model even
+more.
 
 Summarize your major findings from your analyses in a few paragraphs and
 plots. What conclusions do you draw from your findings? Any insights on
