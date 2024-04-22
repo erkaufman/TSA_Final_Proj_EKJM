@@ -1057,20 +1057,13 @@ autoplot(ts_LT2_monthly_reg, series = "Original") +
 
 #### Summary and Conclusions
 
-We used four different kinds of models to predict depth to groundwater at two wells within confined and unconfined portions of the Auser Aquifer. These models were a seasonal arima, exponential smoothing, state space exponential smoothing, and a neural network. We first explored model performance without exogenous variables and found that ETS best predicted depth to groundwater in the confined aquifer, and the seasonal auto arima best predicted depth to groundwater in the unconfined aquifer. [reference the figures and table that show this here]
+We used four different kinds of models to predict depth to groundwater at two wells within confined and unconfined portions of the Auser Aquifer. These included a seasonal arima, exponential smoothing, state space exponential smoothing, and a neural network model. We first explored model performance without exogenous variables and found that ETS best predicted depth to groundwater in the confined aquifer, and the seasonal auto arima best predicted depth to groundwater in the unconfined aquifer, as determined by RMSE and MAPE scores on a final year of holdout data. The model performances are seen in Figures 7 and 8, and forecast accuracy metrics are displayed in Tables 5 and 6. 
 
-We then incorporated exogenous variables into our seasonal auto arima model, and found that this improved model performance for both wells (reference the figures this is in). For both of the wells we explored, using temperature as an exogenous variable improved model accuracy the greatest, [RMSE and MAPE are \_\_\_].
+We then incorporated exogenous variables into our seasonal auto arima model, and found that this improved model performance for both wells, as seen in Figure 9, and the forecast accuracy metrics of Tables 7 and 8. For both of the wells we explored, using temperature as an exogenous variable improved model accuracy the greatest.
 
-The well within the unconfined aquifer (SAL) had more significant improvement in model forecast when including exogenous variables than the well within the confined aquifer (LT2)
+The well within the unconfined aquifer (SAL) had more significant improvement in model forecast when including exogenous variables than the well within the confined aquifer (LT2). This is likely due to the fact that groundwater levels within the unconfined aquifer fluctuate with greater frequency due to climatic factors. Rain can recharge unconfined aquifers faster than an confined aquifer, and extreme heat would cause more evaporation in an unconfined aquifer than a confined one. 
 
-The seasonal auto arima for well LT2 (confined) had p,d,q of \_\_\_.
-
-The seasonal auto arima for well SAL (unconfined) had p,d,q of \_\_\_.
-
-
-It makes sense that climatic variables of temperature and rainfall both improved model performance when used an exogenous variables. Aquifers are recharged during rainfall events, and water can evaporate from them during extreme heat. We expected that rainfall would improve model performance more than temperature when predicting depth to groundwater, but perhaps there is a lag in the correlation that we were unable to account for, and could be explored further to improve the model even more.
-
-Summarize your major findings from your analyses in a few paragraphs and plots. What conclusions do you draw from your findings? Any insights on how to improve the model?
+That being said, these climatic factors defintiely influence depth to groundwater, so it makes sense that variables of temperature and rainfall both improved model performance when used an exogenous variables. We expected that rainfall would improve model performance more than temperature when predicting depth to groundwater, but perhaps there is a lag in the correlation that we were unable to account for, and could be explored further to improve the model even more.
 
 #### Bibliography
 
