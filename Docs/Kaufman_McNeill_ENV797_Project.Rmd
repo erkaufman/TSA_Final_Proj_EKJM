@@ -1,5 +1,6 @@
 ---
-title: "ENV 797 Final Project"
+title: "Forecasting Groundwater Availability in Auser Aquifer, Italy"
+subtitle: "ENV 797 Final Project"
 author: "Emma Kaufman and Jenn McNeill"
 date: "2024-04-10"
 output: pdf_document
@@ -30,9 +31,9 @@ library(gridExtra)
 
 This project focuses on predicting water availability in an Italian aquifer managed by Acea Group, a leading Italian utility operator. The group provides water services to 9 million inhabitants across Italy.
 
-In order to best service their customers, the Acea group must understand how much water is available in the water bodies from which they extract. Forecasting water availability in a water body is necessary to ensure daily consumption needs are met.
+In order to best service their customers, the Acea Group must understand how much water is available in the water bodies from which they extract. Forecasting water availability in a water body is necessary to ensure daily consumption needs are met.
 
-The UN reported that groundwater provides “half of the volume of water withdrawn for domestic use by the global population” and that water use is expected to grow 1% per year over the next thirty years (UN, 2022). Thus, it is important to explore how much groundwater will be available in the future. If groundwater levels are forecasted to drop dramatically, these models can be used to urge for more efficient water use practices and investments into groundwater recharge strategies.
+In 2022, the UN reported that groundwater provides “half of the volume of water withdrawn for domestic use by the global population” and that water use is expected to grow 1% per year over the next thirty years (UN, 2022). Thus, it is important to explore how much groundwater will be available in the future. If groundwater levels are forecasted to drop dramatically, these models can be used to urge for more efficient water use practices and investments into groundwater recharge strategies.
 
 We focused our study in Italy due to the comprehensive data we were able to access in the region. In the following report, our objective is to examine the best models and exogenous variables that can help accurately predict groundwater levels. We hope that these findings offer insight about how to focus groundwater forecasting efforts in other regions across the globe.
 
@@ -170,7 +171,7 @@ kbl(data_information, caption="Acea Group Auser Aquifer Data Structure") %>%
 
 ## Data Wrangling
 
-The first obstacle with wrangling our data came when we realized that the data for each variable started at a different date. We found this issue by plotting the five depth to groundwater lines and seeing a large lag between when different well depth data began. We also observed NA values within each series, and a few random "zero" values that we assumed to be errors. To rectify this issue, we converted all "zero" values to NA, found the start date for each well's data, and then converted each well's data into a time series object. When we plotted these five time series together, we still had gaps of NA data. We ran the tsclean() function to fill in the gaps of missing data with interpolated values and then had five clean series with no data gaps, as displayed in Figure 1 below.
+The first obstacle with wrangling our data came when we realized that the data for each variable started at a different date. We found this issue by plotting the five depth to groundwater lines and seeing a large lag between when different well data began. We also observed NA values within each series and a few random "zero" values that we assumed to be errors. To rectify this issue, we converted all "zero" values to NA, found the start date for each well's data, and then converted each well's data into a time series object. When we plotted these five time series together, we still had gaps of NA data. We ran the tsclean() function to fill in the gaps of missing data with interpolated values and then had five clean series with no data gaps, as displayed in Figure 1 below.
 
 
 ```{r create ts objects for each well, warning=FALSE, include=FALSE}
@@ -763,7 +764,7 @@ kbl(SAL_scores,
 
 ```
 
-According to our results, the SARIMA model resulted in the lowest root mean square error (RMSE) for the LT2 well, and the ETS model resulted in the lowest RMSE for the SAL well. To continue our analysis, we wanted to improve upon these basic models by adding in exogenous variables and seeing if our RMSE values decreased. For each well, we started by adding rain as an exogenous variable and then added temperature as an exogenous variable in the SARIMA model. Adding the exogenous variables successfully improved the accuracy of our model performance in the last year of data. The SARIMA model results with exogenous variables are seen in Figure 9 below. Tables 7 and 8 compare performance metrics of the SARIMA model without exogenous variables and for the models that included rainfall and temperature. We found that at each of the wells, the SARIMA model with temperature as an exogenous variable had the lowest RMSE and MAPE. 
+According to our results, the SARIMA model resulted in the lowest root mean square error (RMSE) for the LT2 well, and the ETS model resulted in the lowest RMSE for the SAL well. To continue our analysis, we wanted to improve upon these basic models by adding in exogenous variables and seeing if our RMSE values decreased. For each well, we started by adding rain as an exogenous variable and then added temperature as an exogenous variable in the SARIMA model. Adding the exogenous variables successfully improved the accuracy of our model performance in the last year of data. The SARIMA model results with exogenous variables are seen in Figure 9 below. Tables 7 and 8 compare performance metrics of the SARIMA model without exogenous variables and for the models that included rainfall and temperature. We found that at each of the wells, the SARIMA model with temperature as an exogenous variable had the lowest RMSE and mean absolute percentage error (MAPE). 
 
 ```{r create monthly exogenous variables for Sarima, warning=FALSE, include=FALSE}
 
