@@ -1039,7 +1039,7 @@ Antimo Musone, Aredhel Bergström, Federico, Luisa Marotta, Maggie, Maurizio Luc
 
 ## Appendix
 
-For further analysis, we attempted to run a forecast of the seasonal arima one year into the future to see what future groundwater availability in these two wells would look like. We ran into an issue where our forecast with temperature as an exogenous variable ended up forecasting 12 years into the future instead of 12 months. After multiple attempts, we were not able to figure out how to rectify the issue. Although these forecasts are not what we had hoped for, we still found the results interesting and wanted to include them in our report. Below we have shown our code and the resulting plots for reference. 
+For further analysis, forecasts of the seasonal arima models one year into the future were explored to see what future groundwater availability in these two wells would look like. Issues were encountered when forecasting with temperature as an exogenous variable, as plots ended up forecasting 12 years into the future instead of 12 months. These results are valuable for around one year, but it is not advised to use these models to forecast 12 years into the future (which is why they are not included in the report). Below is the code and the resulting plots for reference.
 
 ```{r warning=FALSE, message=FALSE}
 
