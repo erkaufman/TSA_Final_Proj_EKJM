@@ -1,7 +1,6 @@
 ---
 title: "Forecasting Groundwater Availability in Auser Aquifer, Italy"
-subtitle: "ENV 797 Final Project"
-subtitle: "Repository: https://github.com/erkaufman/TSA_Final_Proj_EKJM"
+subtitle: "ENV 797 Final Project, Repository: https://github.com/erkaufman/TSA_Final_Proj_EKJM"
 author: "Emma Kaufman and Jenn McNeill"
 date: "2024-04-26"
 output: pdf_document
